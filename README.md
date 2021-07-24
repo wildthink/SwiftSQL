@@ -5,11 +5,9 @@
 <img src="https://github.com/kean/SwiftSQL/workflows/CI/badge.svg">
 </p>
 
-**SwiftSQL** is a micro Swift [SQLite](https://www.sqlite.org/index.html) wrapper, solid and meticulously documented. It maps directly to the SQLite concepts and doesn't introduce anything beyond them.
+**SwiftSQL** is a micro Swift [SQLite](https://www.sqlite.org/index.html) wrapper, solid and meticulously documented. It maps directly to the SQLite concepts and doesn't introduce anything beyond them. The entire library fits just under 300 lines of code, but gets you 80% there.
 
 **SwiftSQLExt** introduces some basic conveniences on top of it.
-
-SwiftSQL was created for [Pulse](https://github.com/kean/Pulse) where it is embedded internally. The entire library fits just under 300 lines of code, but gets you 80% there.
 
 <br/>
 
