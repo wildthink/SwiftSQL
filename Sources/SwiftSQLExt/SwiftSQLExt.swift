@@ -53,13 +53,19 @@ public extension SQLStatement {
 }
 
 /// Represents a single row returned by the SQL statement.
-public struct SQLRow {
+public struct SQLRow: Equatable {
+    
+    public static func == (lhs: SQLRow, rhs: SQLRow) -> Bool {
+        lhs.values == rhs.values
+    }
+    
 
     public init(statement: SQLStatement) {
         values = (0..<statement.columnCount).map { index in
             statement.column(at: index)
         }
         columnIndicesByNames = statement.columnIndices
+        columnNames = statement.columnNames
     }
 
     /// Returns a single column of the current result row of a query.
@@ -113,12 +119,25 @@ public struct SQLRow {
         return self[columnIndex]
     }
     
-    private let values: [SQLColumnValue]
-    private let columnIndicesByNames: [String : Int]
+    public let values: [SQLColumnValue]
+    public let columnIndicesByNames: [String : Int]
+    public let columnNames: [String]
 }
 
 public protocol SQLRowDecodable {
     init(row: SQLRow) throws
+}
+
+extension SQLRow: CustomStringConvertible {
+    public var description: String {
+        var str = "Row("
+        for (ndx, v) in values.enumerated() {
+            let (k, v) = (self.columnNames[ndx], v)
+            str += "\(k): \(v) "
+        }
+        str += ")"
+        return str
+    }
 }
 
 public protocol InitializableBySQLColumnValue {

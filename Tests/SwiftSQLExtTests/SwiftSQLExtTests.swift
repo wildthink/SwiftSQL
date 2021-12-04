@@ -26,6 +26,21 @@ final class SwiftSQLExtTests: XCTestCase {
 
     // MARK: Rows
 
+    // jmj
+    func testRawRow() throws {
+        // GIVEN
+        try db.populateStore()
+        
+        // WHEN
+        let row = try db
+            .prepare("SELECT Name, Level FROM Users ORDER BY Level ASC")
+            .row()
+        print (row!.description)
+
+        // THEN
+//        XCTAssertEqual(user, User(name: "Alice", level: 80))
+    }
+
     func testRow() throws {
         // GIVEN
         try db.populateStore()

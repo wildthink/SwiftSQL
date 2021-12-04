@@ -84,6 +84,7 @@ public final class SQLStatement {
     ///
     /// - note: See [SQLite: Result and Error Codes](https://www.sqlite.org/rescode.html)
     /// for more information.
+    @discardableResult
     public func execute() throws -> SQLStatement {
         try isOK(sqlite3_step(ref))
         return self
@@ -279,6 +280,17 @@ public final class SQLStatement {
         indices.reserveCapacity(columnCount)
         for index in 0..<columnCount {
             indices[columnName(at: index).lowercased()] = index
+        }
+        return indices
+    }()
+
+    /// Holds each column index key-ed by its name.
+    /// Initialized for all columns as soon as it's first accessed.
+    public private(set) lazy var columnNames: [String] = {
+        var indices: [String] = []
+        indices.reserveCapacity(columnCount)
+        for index in 0..<columnCount {
+            indices.append(columnName(at: index).lowercased())
         }
         return indices
     }()
