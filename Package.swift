@@ -1,4 +1,4 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.5
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -7,7 +7,7 @@ let package = Package(
     name: "SwiftSQL",
     platforms: [
         .macOS(.v10_13),
-        .iOS(.v11),
+        .iOS(.v13),
         .tvOS(.v11),
         .watchOS(.v4)
     ],
@@ -16,15 +16,25 @@ let package = Package(
         .library(name: "SwiftSQL", targets: ["SwiftSQL"]),
         .library(name: "SwiftSQLExt", targets: ["SwiftSQLExt"]),
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/wildthink/uniqueid",
+            .upToNextMajor(from: "1.0.0")
+        )
+    ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(
-            name: "SwiftSQL"
+            name: "SwiftSQL",
+            dependencies: [
+                .product(name: "UniqueID", package: "uniqueid")
+            ]
         ),
         .testTarget(
             name: "SwiftSQLTests",
-            dependencies: ["SwiftSQL"]
+            dependencies: [
+                "SwiftSQL"]
         ),
         .target(
             name: "SwiftSQLExt",

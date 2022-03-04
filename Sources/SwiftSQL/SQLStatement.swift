@@ -49,7 +49,7 @@ import SQLite3
 public final class SQLStatement {
     let db: SQLConnection
     let ref: OpaquePointer
-
+    
     init(db: SQLConnection, ref: OpaquePointer) {
         self.db = db
         self.ref = ref

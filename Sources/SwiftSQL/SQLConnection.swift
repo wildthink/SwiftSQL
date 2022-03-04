@@ -14,7 +14,8 @@ import SQLite3
 /// For more details about using multiple database connections to improve concurrency, please refer to the
 /// [documentation](https://www.sqlite.org/isolation.html).
 public final class SQLConnection {
-    private(set) var ref: OpaquePointer!
+    public private(set) var ref: OpaquePointer!
+    let _hook: Hook = .init()
 
     /// Returns the last [INSERT row id](https://www.sqlite.org/c3ref/last_insert_rowid.html)
     /// of the database connection. Returns `0` if no successfull INSERT into rowid

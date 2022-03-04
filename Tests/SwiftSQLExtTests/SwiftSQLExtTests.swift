@@ -16,6 +16,8 @@ final class SwiftSQLExtTests: XCTestCase {
 
         tempDir = try! TempDirectory()
         db = try! SQLConnection(location: .disk(url: tempDir.file(named: "test-statements")))
+        
+        try! db.populateCreateTables()
     }
 
     override func tearDown() {
@@ -29,6 +31,10 @@ final class SwiftSQLExtTests: XCTestCase {
     // jmj
     func testRawRow() throws {
         // GIVEN
+        db.createUpdateHandler { info in
+            print(info)
+        }
+        
         try db.populateStore()
         
         // WHEN
@@ -194,7 +200,7 @@ final class SwiftSQLExtTests: XCTestCase {
 }
 
 private extension SQLConnection {
-    func populateStore() throws {
+    func populateCreateTables() throws {
         try execute("""
         CREATE TABLE Users
         (
@@ -211,7 +217,10 @@ private extension SQLConnection {
             Level INTEGER
         )
         """)
-
+    }
+    
+    func populateStore() throws {
+        
         let insertUsersStatement = try self.prepare("""
         INSERT INTO Users (Name, Level)
         VALUES (?, ?)
