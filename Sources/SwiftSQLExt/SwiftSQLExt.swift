@@ -124,7 +124,9 @@ public struct SQLRow: Equatable {
     public let columnNames: [String]
 }
 
-public protocol SQLRowDecodable {
+public protocol SQLDecodable {}
+
+public protocol SQLRowDecodable: SQLDecodable {
     init(row: SQLRow) throws
 }
 
