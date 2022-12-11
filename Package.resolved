@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "KeyValueCoding",
+        "repositoryURL": "https://github.com/ikhvorost/KeyValueCoding.git",
+        "state": {
+          "branch": null,
+          "revision": "b16c01ab628962628431492b3fff84e69c75f760",
+          "version": "1.0.0"
+        }
+      },
+      {
+        "package": "UniqueID",
+        "repositoryURL": "https://github.com/wildthink/uniqueid",
+        "state": {
+          "branch": null,
+          "revision": "85719620b1857bcff2ab748194bd69148613dca5",
+          "version": "1.0.3"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

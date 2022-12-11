@@ -1,4 +1,18 @@
 import Foundation
+import SwiftSQL
+
+extension Date: SQLBindable {
+    public static var defaultSQLBinder: SQLBinder<Self> {
+        let sb = String.defaultSQLBinder
+        return .init(
+            getf: {
+                PreciseDateFormatter.date(from: sb.get(from: $0, at: $1))!
+            },
+            setf: {
+                sb.set(from: $0, at: $1, to: PreciseDateFormatter.string(from: $2))
+            })
+    }
+}
 
 // `ISO8601DateFormatter` does not maintain nanosecond precision, which makes it
 // nearly impossible to equate encodable objects that include `Date` properties.

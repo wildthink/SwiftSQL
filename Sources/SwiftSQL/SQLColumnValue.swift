@@ -3,7 +3,7 @@
 // Copyright (c) 2020 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
-
+/*
 public enum SQLColumnValue: Equatable {
     case int64(Int64)
     case double(Double)
@@ -28,3 +28,4 @@ extension SQLColumnValue: CustomStringConvertible {
         }
     }
  }
+*/

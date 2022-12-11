@@ -4,7 +4,7 @@
 
 import Foundation
 import SQLite3
-
+/* jmj
 /// Represents a data type supported by SQLite.
 ///
 /// - note: To add support for custom data types, like `Bool` or `Date`, see
@@ -80,3 +80,4 @@ extension Data: SQLDataType {
 }
 
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+*/

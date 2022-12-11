@@ -24,7 +24,7 @@ import SQLite3
 ///     """)
 ///
 /// 2. Bind values to parameters using one of the `bind()` methods. The provided
-/// values must be one of the data types supported by SQLite (see `SQLDataType` for
+/// values must be one of the data types supported by SQLite (see `SQLBindable` for
 /// more info)
 ///
 ///     try statement.bind("Alexander", "Grebenyuk")
@@ -48,7 +48,7 @@ import SQLite3
 /// `SQLStatement` object gets deallocated.
 public final class SQLStatement {
     let db: SQLConnection
-    let ref: OpaquePointer
+    public let ref: OpaquePointer
     
     init(db: SQLConnection, ref: OpaquePointer) {
         self.db = db
@@ -99,7 +99,7 @@ public final class SQLStatement {
     ///        .execute()
     ///
     @discardableResult
-    public func bind(_ parameters: SQLDataType?...) throws -> Self {
+    public func bind(_ parameters: (any SQLBindable)?...) throws -> Self {
         try bind(parameters)
         return self
     }
@@ -111,9 +111,9 @@ public final class SQLStatement {
     ///        .execute()
     ///
     @discardableResult
-    public func bind(_ parameters: [SQLDataType?]) throws -> Self {
+    public func bind(_ parameters: [(any SQLBindable)?]) throws -> Self {
         for (index, value) in zip(parameters.indices, parameters) {
-            try _bind(value, at: Int32(index + 1))
+            try _bind(value, at: Int(index + 1))
         }
         return self
     }
@@ -127,7 +127,7 @@ public final class SQLStatement {
     /// - parameter name: The name of the parameter. If the name is missing, throws
     /// an error.
     @discardableResult
-    public func bind(_ parameters: [String: SQLDataType?]) throws -> Self {
+    public func bind(_ parameters: [String: (any SQLBindable)?]) throws -> Self {
         for (key, value) in parameters {
             try _bind(value, for: key)
         }
@@ -143,7 +143,7 @@ public final class SQLStatement {
     /// - parameter name: The name of the parameter. If the name is missing, throws
     /// an error.
     @discardableResult
-    public func bind(_ value: SQLDataType?, for name: String) throws -> Self {
+    public func bind<B: SQLBindable>(_ value: B?, for name: String) throws -> Self {
         try _bind(value, for: name)
         return self
     }
@@ -152,24 +152,42 @@ public final class SQLStatement {
     ///
     /// - parameter index: The index starts at 0.
     @discardableResult
-    public func bind(_ value: SQLDataType?, at index: Int) throws -> Self {
-        try _bind(value, at: Int32(index + 1))
+    public func bind<B: SQLBindable>(_ value: B?, at index: Int) throws -> Self {
+        try _bind(value, at: (index + 1))
         return self
     }
 
-    private func _bind(_ value: SQLDataType?, for name: String) throws {
+    private func _bind(_ value: (any SQLBindable)?, for name: String) throws {
         let index = sqlite3_bind_parameter_index(ref, name)
         guard index > 0 else {
             throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
         }
-        try _bind(value, at: index)
+        try _bind(value, at: Int(index))
     }
 
-    private func _bind(_ value: SQLDataType?, at index: Int32) throws {
+    private func _bind<B: SQLBindable>(_ value: B?, for name: String) throws {
+        let index = sqlite3_bind_parameter_index(ref, name)
+        guard index > 0 else {
+            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
+        }
+        try _bind(value, at: Int(index))
+    }
+
+    private func _bind(_ value: (any SQLBindable)?, at index: Int) throws {
         if let value = value {
-            value.sqlBind(statement: ref, index: index)
+            let sqlBinder = type(of: value).anySQLBinder
+            try sqlBinder.set(from: self, at: Int32(index), to: value)
         } else {
-            sqlite3_bind_null(ref, index)
+            sqlite3_bind_null(ref, Int32(index))
+        }
+    }
+
+    private func _bind<B: SQLBindable>(_ value: B?, at index: Int) throws {
+        if let value = value {
+            B.defaultSQLBinder.setf(self, Int32(index), value)
+//            value.sqlBind(statement: ref, index: index)
+        } else {
+            sqlite3_bind_null(ref, Int32(index))
         }
     }
 
@@ -206,8 +224,9 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-    public func column<T: SQLDataType>(at index: Int) -> T {
-        T.sqlColumn(statement: ref, index: Int32(index))
+    public func column<T: SQLBindable>(at index: Int) -> T {
+        T.defaultSQLBinder.getf(self, Int32(index))
+//        T.sqlColumn(statement: ref, index: Int32(index))
     }
 
     /// Returns a single column of the current result row of a query. If the
@@ -217,14 +236,17 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-    public func column<T: SQLDataType>(at index: Int) -> T? {
+    public func column<T: SQLBindable>(at index: Int) -> T? {
         if sqlite3_column_type(ref, Int32(index)) == SQLITE_NULL {
             return nil
         } else {
-            return T.sqlColumn(statement: ref, index: Int32(index))
+            return T.defaultSQLBinder.getf(self, Int32(index))
+//            return T.sqlColumn(statement: ref, index: Int32(index))
         }
     }
-    
+
+    /* jmj
+    // deprecated - see SQLBindable
     public func column(at index: Int) -> SQLColumnValue {
         let index = Int32(index)
         let type = sqlite3_column_type(ref, index)
@@ -246,7 +268,7 @@ public final class SQLStatement {
                 return .null
         }
     }
-
+     */
     /// Return the number of columns in the result set returned by the statement.
     ///
     /// If this routine returns 0, that means the prepared statement returns no data
