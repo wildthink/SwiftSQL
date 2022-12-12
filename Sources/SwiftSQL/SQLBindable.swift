@@ -18,6 +18,7 @@ extension SQLBindable {
 }
 
 public protocol AnySQLBinder {
+    var name: String? { get }
     var valueType: Any.Type { get }
     func get<V>(from: SQLStatement, at: Int32) throws -> V
     func set<V>(from: SQLStatement, at: Int32, to: V) throws
@@ -25,14 +26,17 @@ public protocol AnySQLBinder {
 
 public struct SQLBinder<Value> {
     typealias Value = Value
-    public var valueType: Any.Type
-    var getf: (SQLStatement,Int32) -> Value
-    var setf: (SQLStatement,Int32,Value) -> Void
+    public var name: String?
+    public let valueType: Any.Type
+    let getf: (SQLStatement,Int32) -> Value
+    let setf: (SQLStatement,Int32,Value) -> Void
 
-    init(valueType: Value.Type = Value.self,
-                getf: @escaping (SQLStatement, Int32) -> Value,
-                setf: @escaping (SQLStatement, Int32, Value) -> Void)
+    public init(_ name: String? = nil,
+         valueType: Value.Type = Value.self,
+         getf: @escaping (SQLStatement, Int32) -> Value,
+         setf: @escaping (SQLStatement, Int32, Value) -> Void)
     {
+        self.name = name
         self.valueType = valueType
         self.getf = getf
         self.setf = setf
@@ -87,19 +91,41 @@ extension Data: SQLBindable {
         getf: { $0.dataValue(at: Int($1)) },
         setf: {
             sqlite3_bind_blob($0.ref, Int32($1), Array($2), Int32($2.count), SQLITE_TRANSIENT)
-//
-//            let (statement, ndx, data) = ($0, $1, $2)
-//            let result =
-//            data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
-//                sqlite3_bind_blob(statement.ref, Int32(ndx), bytes.baseAddress, Int32(data.count), SQLITE_TRANSIENT)
-//            }
-//            let result = data.withUnsafeBytes { (bytes: UnsafePointer) -> Int32 in
-//                return sqlite3_bind_blob(statement.ref, Int32(ndx), bytes, Int32(data.count), SQLITE_TRANSIENT)
-//            }
         })
     }
 }
 
+extension Optional: SQLBindable where Wrapped: AnySQLBinder {
+    public static var defaultSQLBinder: SQLBinder<Optional<Wrapped>> { .init(
+        getf: { (s,i) in
+            if let v = s.value(at: i) {
+                return v as? Wrapped
+            } else {
+                return .none
+            }
+        },
+        setf: {
+            if let v = $2 {
+                try? v.set(from: $0, at: $1, to: v)
+            } else {
+                sqlite3_bind_null($0.ref, Int32($1))
+            }
+        })
+    }
+}
+
+// MARK: - Commonly used Columns
+extension SQLBinder {
+    func named(_ n: String) -> Self {
+        var c = self
+        c.name = n
+        return c
+    }
+}
+
+public extension AnySQLBinder {
+    static var id: Self { Int64.defaultSQLBinder.named("id") as! Self }
+}
 
 func demo() {
     let b: [AnySQLBinder] = [
@@ -122,6 +148,10 @@ extension SQLStatement {
     }
 
     public func value(at index: Int) -> Any? {
+        return self.value(at: Int32(index))
+    }
+
+    public func value(at index: Int32) -> Any? {
         let index = Int32(index)
         let type = sqlite3_column_type(ref, index)
         switch type {
@@ -138,6 +168,8 @@ extension SQLStatement {
             } else {
                 return Data()
             }
+        case SQLITE_NULL:
+            return nil
         default:
             return nil
         }

@@ -14,6 +14,11 @@ extension Date: SQLBindable {
     }
 }
 
+public extension AnySQLBinder {
+    static var created_at: Self { Date.defaultSQLBinder.named("created_at") as! Self }
+    static var updated_at: Self { Date.defaultSQLBinder.named("updated_at") as! Self }
+}
+
 // `ISO8601DateFormatter` does not maintain nanosecond precision, which makes it
 // nearly impossible to equate encodable objects that include `Date` properties.
 // `DateFormatter` maintains nanosecond precision by storing the exact

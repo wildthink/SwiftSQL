@@ -1,3 +1,4 @@
+/*
 import Foundation
 import SQLite3
 
@@ -227,3 +228,4 @@ extension Optional where Wrapped: StringProtocol {
         }
     }
 }
+*/

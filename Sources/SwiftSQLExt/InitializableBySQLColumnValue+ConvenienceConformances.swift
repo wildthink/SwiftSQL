@@ -12,7 +12,7 @@ import SwiftSQL
 // From the docs:
 // >If the result column is not initially in the requested format (for example, if the query returns an integer but the sqlite3_column_text() interface is used to extract the value) then an automatic type conversion is performed.
 // Reference: https://www.sqlite.org/c3ref/column_blob.html
-
+/*
 extension Int: InitializableBySQLColumnValue {
     public init?(sqlColumnValue: SQLColumnValue) {
         switch sqlColumnValue {
@@ -114,3 +114,4 @@ extension Data: InitializableBySQLColumnValue {
         }
     }
 }
+*/

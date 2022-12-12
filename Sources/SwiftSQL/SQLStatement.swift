@@ -173,6 +173,7 @@ public final class SQLStatement {
         try _bind(value, at: Int(index))
     }
 
+    // Future release will include the use of alternate SQLBinders
     private func _bind(_ value: (any SQLBindable)?, at index: Int) throws {
         if let value = value {
             let sqlBinder = type(of: value).anySQLBinder
@@ -185,7 +186,6 @@ public final class SQLStatement {
     private func _bind<B: SQLBindable>(_ value: B?, at index: Int) throws {
         if let value = value {
             B.defaultSQLBinder.setf(self, Int32(index), value)
-//            value.sqlBind(statement: ref, index: index)
         } else {
             sqlite3_bind_null(ref, Int32(index))
         }
