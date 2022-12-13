@@ -7,11 +7,17 @@
 
 import Foundation
 import SQLite3
-//import SwiftSQL
 
 public protocol SQLBindable {
     static var defaultSQLBinder: SQLBinder<Self> { get }
 }
+
+//struct BinderKey: CodingKey {
+//extension CodingKey: ExpressibleByStringLiteral {
+//    init?(literalString: String) {
+//        Self(stringValue: literalString)
+//    }
+//}
 
 extension SQLBindable {
     static var anySQLBinder: AnySQLBinder { Self.defaultSQLBinder }
