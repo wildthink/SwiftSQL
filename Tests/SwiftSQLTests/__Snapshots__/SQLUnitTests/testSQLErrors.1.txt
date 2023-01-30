@@ -1,0 +1,3 @@
+▿ SQLError
+  - code: 0
+  - message: "E1 Error"

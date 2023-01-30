@@ -1,0 +1,16 @@
+▿ 5 key/value pairs
+  ▿ (2 elements)
+    - key: "id"
+    - value: 80
+  ▿ (2 elements)
+    - key: "level"
+    - value: "Alex"
+  ▿ (2 elements)
+    - key: "name"
+    - value: "66"
+  ▿ (2 elements)
+    - key: "number"
+    - value: 43.5
+  ▿ (2 elements)
+    - key: "thunk"
+    - value: 3 bytes
