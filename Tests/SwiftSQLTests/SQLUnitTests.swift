@@ -55,10 +55,10 @@ final class SQLUnitTests: XCTestCase {
         let row = select.dictionaryValue
         assertSnapshot(matching: row, as: .dump)
 
-        let data: Data = select.value(at: 4)
-        let str: String = select.value(at: 1)
-        let real: Double = select.value(at: 3)
-        let int: Int = select.value(at: 2)
+        let data: Data = select.column(at: 4)
+        let str: String = select.column(at: 1)
+        let real: Double = select.column(at: 3)
+        let int: Int = select.column(at: 2)
         assertSnapshot(matching: (data, str, real, int), as: .dump)
     }
 

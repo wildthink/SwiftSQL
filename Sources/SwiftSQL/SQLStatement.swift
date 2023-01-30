@@ -189,6 +189,10 @@ public final class SQLStatement {
         else if let value = value as? (any BinaryFloatingPoint) {
             sqlite3_bind_double(ref, index, Double(value))
         }
+        else if let value = value as? String {
+            sqlite3_bind_text(ref, index, value,
+                              -1, SQLITE_TRANSIENT)
+        }
         else if let value = value as? (any StringProtocol) {
             sqlite3_bind_text(ref, index, String(value),
                               -1, SQLITE_TRANSIENT)
@@ -236,9 +240,9 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-    public func column<T: SQLBindable>(at index: Int) -> T {
-        T.defaultSQLBinder.getf(self, Int32(index)) as! T
-    }
+//    public func column<T: SQLBindable>(at index: Int) -> T {
+//        T.defaultSQLBinder.getf(self, Int32(index)) as! T
+//    }
 
     /// Returns a single column of the current result row of a query. If the
     /// value is `Null`, returns `nil.`
@@ -247,52 +251,83 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-    public func column<T: SQLBindable>(at index: Int) -> T? {
-        if sqlite3_column_type(ref, Int32(index)) == SQLITE_NULL {
-            return nil
-        } else {
-            return T.defaultSQLBinder.getf(self, Int32(index)) as? T
-        }
-    }
+//    public func column<T: SQLBindable>(at index: Int) -> T? {
+//        if sqlite3_column_type(ref, Int32(index)) == SQLITE_NULL {
+//            return nil
+//        } else {
+//            return T.defaultSQLBinder.getf(self, Int32(index)) as? T
+//        }
+//    }
 
     // MARK: - Builtin Column Value Types
     // SQLITE_TEXT
-    public func value(at ndx: Int) -> String {
+    public func column(at ndx: Int) -> String {
+        column(at: ndx) ?? ""
+//        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_TEXT
+//        ? String(cString: sqlite3_column_text(ref, Int32(ndx)))
+//        : ""
+    }
+
+    public func column(at ndx: Int) -> String? {
         sqlite3_column_type(ref, Int32(ndx)) == SQLITE_TEXT
         ? String(cString: sqlite3_column_text(ref, Int32(ndx)))
-        : ""
+        : nil
     }
 
     // SQLITE_INTEGER
-    public func value<V: FixedWidthInteger>(
+    public func column<V: FixedWidthInteger>(
         at ndx: Int,
         as vtype: V.Type = V.self)
     -> V {
+        column(at: ndx) ?? .zero
+//        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_INTEGER
+//        ? V(sqlite3_column_int64(ref, Int32(ndx)))
+//        : .zero
+    }
+
+    public func column<V: FixedWidthInteger>(
+        at ndx: Int,
+        as vtype: V.Type = V.self)
+    -> V? {
         sqlite3_column_type(ref, Int32(ndx)) == SQLITE_INTEGER
         ? V(sqlite3_column_int64(ref, Int32(ndx)))
-        : .zero
+        : nil
     }
 
     // SQLITE_FLOAT
-    public func value<V: BinaryFloatingPoint>(
+    public func column<V: BinaryFloatingPoint>(
         at ndx: Int,
         as v: V.Type = V.self)
     -> V {
+        column(at: ndx) ?? .zero
+//        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_FLOAT
+//        ? V(sqlite3_column_double(ref, Int32(ndx)))
+//        : .zero
+    }
+
+    public func column<V: BinaryFloatingPoint>(
+        at ndx: Int,
+        as v: V.Type = V.self)
+    -> V? {
         sqlite3_column_type(ref, Int32(ndx)) == SQLITE_FLOAT
         ? V(sqlite3_column_double(ref, Int32(ndx)))
-        : .zero
+        : nil
     }
 
     // SQLITE_BLOB
-    public func value(at index: Int) -> Data {
+    public func column(at index: Int) -> Data {
+        column(at: index) ?? Data()
+    }
+
+    public func column(at index: Int) -> Data? {
         let ndx = Int32(index)
         guard sqlite3_column_type(ref, ndx) == SQLITE_BLOB
-        else { return Data() }
+        else { return nil }
         if let bytes = sqlite3_column_blob(ref, ndx) {
             let byteCount = sqlite3_column_bytes(ref, ndx)
             return Data(bytes: bytes, count: Int(byteCount))
         } else {
-            return Data()
+            return nil
         }
     }
 

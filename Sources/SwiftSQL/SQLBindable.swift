@@ -120,7 +120,7 @@ extension String: SQLBindable {
 extension Data: SQLBindable {
     public static var defaultSQLBinder: SQLBinder { .init(
         getf: {
-            let data: Data = $0.value(at: Int($1))
+            let data: Data = $0.column(at: Int($1))
             return data
         },
         setf: {(s, ndx, data: Data) in

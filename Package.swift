@@ -37,6 +37,7 @@ let package = Package(
             dependencies: [
                 "SwiftSQL",
                 .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+                .product(name: "KeyValueCoding", package: "KeyValueCoding"),
             ]
         ),
         .target(
@@ -48,7 +49,11 @@ let package = Package(
         ),
         .testTarget(
             name: "SwiftSQLExtTests",
-            dependencies: ["SwiftSQL", "SwiftSQLExt"]
+            dependencies: [
+                "SwiftSQL",
+                "SwiftSQLExt",
+                .product(name: "KeyValueCoding", package: "KeyValueCoding"),
+            ]
         ),
     ]
 )
