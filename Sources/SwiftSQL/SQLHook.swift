@@ -7,10 +7,10 @@ import SQLite3
 public extension SQLConnection {
     
     struct UpdateInfo: CustomStringConvertible {
-        let database: String
-        let tableName: String
-        let op_code: Int32
-        let rowid: Int64
+        public let database: String
+        public let tableName: String
+        public let op_code: Int32
+        public let rowid: Int64
         
         init(op: Int32,
              db: UnsafePointer<Int8>?,

@@ -1,0 +1,16 @@
+▿ 3 elements
+  ▿ SQLBinder<Int>
+    - getf: (Function)
+    - name: Optional<String>.none
+    - setf: (Function)
+    - valueType: Int
+  ▿ SQLBinder<Int32>
+    - getf: (Function)
+    - name: Optional<String>.none
+    - setf: (Function)
+    - valueType: Int32
+  ▿ SQLBinder<Float>
+    - getf: (Function)
+    - name: Optional<String>.none
+    - setf: (Function)
+    - valueType: Float

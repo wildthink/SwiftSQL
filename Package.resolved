@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "KeyValueCoding",
+        "repositoryURL": "https://github.com/wildthink/KeyValueCoding.git",
+        "state": {
+          "branch": null,
+          "revision": "69640864f3f3f6f8e0c8e6421e0ad53074c2c54f",
+          "version": "1.1.0"
+        }
+      },
+      {
+        "package": "swift-snapshot-testing",
+        "repositoryURL": "https://github.com/pointfreeco/swift-snapshot-testing",
+        "state": {
+          "branch": null,
+          "revision": "cef5b3f6f11781dd4591bdd1dd0a3d22bd609334",
+          "version": "1.11.0"
+        }
+      },
+      {
+        "package": "UniqueID",
+        "repositoryURL": "https://github.com/wildthink/uniqueid",
+        "state": {
+          "branch": null,
+          "revision": "85719620b1857bcff2ab748194bd69148613dca5",
+          "version": "1.0.3"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -24,7 +24,7 @@ import SQLite3
 ///     """)
 ///
 /// 2. Bind values to parameters using one of the `bind()` methods. The provided
-/// values must be one of the data types supported by SQLite (see `SQLDataType` for
+/// values must be one of the data types supported by SQLite (see `SQLBindable` for
 /// more info)
 ///
 ///     try statement.bind("Alexander", "Grebenyuk")
@@ -48,7 +48,7 @@ import SQLite3
 /// `SQLStatement` object gets deallocated.
 public final class SQLStatement {
     let db: SQLConnection
-    let ref: OpaquePointer
+    public let ref: OpaquePointer
     
     init(db: SQLConnection, ref: OpaquePointer) {
         self.db = db
@@ -99,7 +99,7 @@ public final class SQLStatement {
     ///        .execute()
     ///
     @discardableResult
-    public func bind(_ parameters: SQLDataType?...) throws -> Self {
+    public func bind(_ parameters: (any SQLBindable)?...) throws -> Self {
         try bind(parameters)
         return self
     }
@@ -111,9 +111,9 @@ public final class SQLStatement {
     ///        .execute()
     ///
     @discardableResult
-    public func bind(_ parameters: [SQLDataType?]) throws -> Self {
+    public func bind(_ parameters: [(any SQLBindable)?]) throws -> Self {
         for (index, value) in zip(parameters.indices, parameters) {
-            try _bind(value, at: Int32(index + 1))
+            try _bind(value, at: Int(index + 1))
         }
         return self
     }
@@ -127,7 +127,7 @@ public final class SQLStatement {
     /// - parameter name: The name of the parameter. If the name is missing, throws
     /// an error.
     @discardableResult
-    public func bind(_ parameters: [String: SQLDataType?]) throws -> Self {
+    public func bind(_ parameters: [String: (any SQLBindable)?]) throws -> Self {
         for (key, value) in parameters {
             try _bind(value, for: key)
         }
@@ -143,7 +143,7 @@ public final class SQLStatement {
     /// - parameter name: The name of the parameter. If the name is missing, throws
     /// an error.
     @discardableResult
-    public func bind(_ value: SQLDataType?, for name: String) throws -> Self {
+    public func bind<B: SQLBindable>(_ value: B?, for name: String) throws -> Self {
         try _bind(value, for: name)
         return self
     }
@@ -152,26 +152,56 @@ public final class SQLStatement {
     ///
     /// - parameter index: The index starts at 0.
     @discardableResult
-    public func bind(_ value: SQLDataType?, at index: Int) throws -> Self {
-        try _bind(value, at: Int32(index + 1))
+    public func bind<B: SQLBindable>(_ value: B?, at index: Int) throws -> Self {
+        try _bind(value, at: (index + 1))
         return self
     }
 
-    private func _bind(_ value: SQLDataType?, for name: String) throws {
+    private func _bind(_ value: (any SQLBindable)?, for name: String) throws {
         let index = sqlite3_bind_parameter_index(ref, name)
         guard index > 0 else {
             throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
         }
-        try _bind(value, at: index)
+        try _bind(value, at: Int(index))
     }
 
-    private func _bind(_ value: SQLDataType?, at index: Int32) throws {
-        if let value = value {
-            value.sqlBind(statement: ref, index: index)
-        } else {
+    private func _bind<B: SQLBindable>(_ value: B?, for name: String) throws {
+        let index = sqlite3_bind_parameter_index(ref, name)
+        guard index > 0 else {
+            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
+        }
+        try _bind(value, at: Int(index))
+    }
+
+    // Future release will include the use of alternate SQLBinders
+//    private func _bind(_ value: (any SQLBindable)?, at index: Int) throws {
+    private func _bind(_ value: Any?, at index: Int) throws {
+        let index = Int32(index)
+        if value == nil {
             sqlite3_bind_null(ref, index)
         }
+        else if let value = value as? Data {
+            sqlite3_bind_blob(ref, index, Array(value), Int32(value.count), SQLITE_TRANSIENT)
+        }
+        else if let value = value as? (any FixedWidthInteger) {
+            sqlite3_bind_int64(ref, index, Int64(value))
+        }
+        else if let value = value as? (any BinaryFloatingPoint) {
+            sqlite3_bind_double(ref, index, Double(value))
+        }
+        else if let value = value as? (any StringProtocol) {
+            sqlite3_bind_text(ref, index, String(value),
+                              -1, SQLITE_TRANSIENT)
+        }
     }
+
+//    private func _bind<B: SQLBindable>(_ value: B?, at index: Int) throws {
+//        if let value = value {
+//            B.defaultSQLBinder.setf(self, Int32(index), value)
+//        } else {
+//            sqlite3_bind_null(ref, Int32(index))
+//        }
+//    }
 
     /// Clears bindings.
     ///
@@ -206,8 +236,8 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-    public func column<T: SQLDataType>(at index: Int) -> T {
-        T.sqlColumn(statement: ref, index: Int32(index))
+    public func column<T: SQLBindable>(at index: Int) -> T {
+        T.defaultSQLBinder.getf(self, Int32(index))
     }
 
     /// Returns a single column of the current result row of a query. If the
@@ -217,33 +247,88 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-    public func column<T: SQLDataType>(at index: Int) -> T? {
+    public func column<T: SQLBindable>(at index: Int) -> T? {
         if sqlite3_column_type(ref, Int32(index)) == SQLITE_NULL {
             return nil
         } else {
-            return T.sqlColumn(statement: ref, index: Int32(index))
+            return T.defaultSQLBinder.getf(self, Int32(index))
         }
     }
-    
-    public func column(at index: Int) -> SQLColumnValue {
+
+    // MARK: - Builtin Column Value Types
+    // SQLITE_TEXT
+    public func value(at ndx: Int) -> String {
+        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_TEXT
+        ? String(cString: sqlite3_column_text(ref, Int32(ndx)))
+        : ""
+    }
+
+    // SQLITE_INTEGER
+    public func value<V: FixedWidthInteger>(
+        at ndx: Int,
+        as vtype: V.Type = V.self)
+    -> V {
+        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_INTEGER
+        ? V(sqlite3_column_int64(ref, Int32(ndx)))
+        : .zero
+    }
+
+    // SQLITE_FLOAT
+    public func value<V: BinaryFloatingPoint>(
+        at ndx: Int,
+        as v: V.Type = V.self)
+    -> V {
+        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_FLOAT
+        ? V(sqlite3_column_double(ref, Int32(ndx)))
+        : .zero
+    }
+
+    // SQLITE_BLOB
+    public func value(at index: Int) -> Data {
+        let ndx = Int32(index)
+        guard sqlite3_column_type(ref, ndx) == SQLITE_BLOB
+        else { return Data() }
+        if let bytes = sqlite3_column_blob(ref, ndx) {
+            let byteCount = sqlite3_column_bytes(ref, ndx)
+            return Data(bytes: bytes, count: Int(byteCount))
+        } else {
+            return Data()
+        }
+    }
+
+    public var dictionaryValue: [String: Any] {
+        var dict: [String:Any] = .init()
+        for n in columnNames {
+            let value = self.anyValue(at: columnIndex(forName: n)!)
+            dict[n] = value
+        }
+        return dict
+    }
+
+//    @_disfavoredOverload
+    public func anyValue(at index: Int) -> Any? {
         let index = Int32(index)
         let type = sqlite3_column_type(ref, index)
+        // switch (type, V.self) {
+        // case (SQLITE_INTEGER, is Int64.Type):
         switch type {
-            case SQLITE_INTEGER:
-                return .int64(sqlite3_column_int64(ref, index))
-            case SQLITE_FLOAT:
-                return .double(sqlite3_column_double(ref, index))
-            case SQLITE_TEXT:
-                return .string(String(cString: sqlite3_column_text(ref, index)))
-            case SQLITE_BLOB:
-                if let bytes = sqlite3_column_blob(ref, index) {
-                    let byteCount = sqlite3_column_bytes(ref, index)
-                    return .data(Data(bytes: bytes, count: Int(byteCount)))
-                } else {
-                    return .data(Data())
-                }
-            default:
-                return .null
+        case SQLITE_INTEGER:
+            return sqlite3_column_int64(ref, index)
+        case SQLITE_FLOAT:
+            return sqlite3_column_double(ref, index)
+        case SQLITE_TEXT:
+            return String(cString: sqlite3_column_text(ref, index))
+        case SQLITE_BLOB:
+            if let bytes = sqlite3_column_blob(ref, index) {
+                let byteCount = sqlite3_column_bytes(ref, index)
+                return Data(bytes: bytes, count: Int(byteCount))
+            } else {
+                return Data()
+            }
+        case SQLITE_NULL:
+            return nil
+        default:
+            return nil
         }
     }
 

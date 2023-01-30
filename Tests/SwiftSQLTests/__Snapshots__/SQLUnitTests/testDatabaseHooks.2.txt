@@ -1,0 +1,5 @@
+▿ main:Test insert(2)
+  - database: "main"
+  - tableName: "Test"
+  - op_code: 18
+  - rowid: 2

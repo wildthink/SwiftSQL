@@ -277,7 +277,7 @@ final class SQLStatementTests: XCTestCase {
     }
 }
 
-private extension SQLConnection {
+extension SQLConnection {
     func createTables() throws {
         try execute("""
         CREATE TABLE Users
