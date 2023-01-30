@@ -8,7 +8,7 @@
 import Foundation
 import SQLite3
 
-public protocol SQLBindable {
+public protocol SQLBindable: Equatable {
     static var defaultSQLBinder: SQLBinder<Self> { get }
 }
 
@@ -52,12 +52,15 @@ public struct SQLBinder<Value> {
 extension SQLBinder: AnySQLBinder {
 
     public func get<V>(from s: SQLStatement, at ndx: Int32) throws -> V {
-        guard V.self == valueType else { throw "BAD" }
-        return self.getf(s, ndx) as! V
+//        guard V.self == valueType else { throw "BAD" }
+//        return self.getf(s, ndx) as! V
+        let value = self.getf(s, ndx)
+        guard type(of: value) == valueType else { throw "BAD" }
+        return value as! V
     }
 
     public func set<V>(from s: SQLStatement, at ndx: Int32, to value: V) throws {
-        guard V.self == valueType else { throw "BAD" }
+        guard type(of: value) == valueType else { throw "BAD" }
         self.setf(s, ndx, value as! Value)
     }
 }
@@ -94,13 +97,14 @@ extension String: SQLBindable {
 
 extension Data: SQLBindable {
     public static var defaultSQLBinder: SQLBinder<Self> { .init(
-        getf: { $0.dataValue(at: Int($1)) },
+        getf: { $0.value(at: Int($1)) },
         setf: {
             sqlite3_bind_blob($0.ref, Int32($1), Array($2), Int32($2.count), SQLITE_TRANSIENT)
         })
     }
 }
 
+/*
 extension Optional: SQLBindable where Wrapped: AnySQLBinder {
     public static var defaultSQLBinder: SQLBinder<Optional<Wrapped>> { .init(
         getf: { (s,i) in
@@ -119,6 +123,7 @@ extension Optional: SQLBindable where Wrapped: AnySQLBinder {
         })
     }
 }
+*/
 
 // MARK: - Commonly used Columns
 extension SQLBinder {
@@ -142,42 +147,3 @@ func demo() {
 }
 
 extension String: Error {}
-
-extension SQLStatement {
-
-    public func dataValue(at index: Int) -> Data {
-        guard let pointer = sqlite3_column_blob(self.ref, Int32(index)) else {
-            return Data()
-        }
-        let count = Int(sqlite3_column_bytes(self.ref, Int32(index)))
-        return Data(bytes: pointer, count: count)
-    }
-
-    public func value(at index: Int) -> Any? {
-        return self.value(at: Int32(index))
-    }
-
-    public func value(at index: Int32) -> Any? {
-        let index = Int32(index)
-        let type = sqlite3_column_type(ref, index)
-        switch type {
-        case SQLITE_INTEGER:
-            return sqlite3_column_int64(ref, index)
-        case SQLITE_FLOAT:
-            return sqlite3_column_double(ref, index)
-        case SQLITE_TEXT:
-            return String(cString: sqlite3_column_text(ref, index))
-        case SQLITE_BLOB:
-            if let bytes = sqlite3_column_blob(ref, index) {
-                let byteCount = sqlite3_column_bytes(ref, index)
-                return Data(bytes: bytes, count: Int(byteCount))
-            } else {
-                return Data()
-            }
-        case SQLITE_NULL:
-            return nil
-        default:
-            return nil
-        }
-    }
-}
