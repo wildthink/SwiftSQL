@@ -9,7 +9,7 @@ import Foundation
 import SQLite3
 
 public protocol SQLBindable: Equatable {
-    static var defaultSQLBinder: SQLBinder<Self> { get }
+    static var defaultSQLBinder: SQLBinder { get }
 }
 
 extension String: Error {}
@@ -32,7 +32,29 @@ public protocol AnySQLBinder {
     func set<V>(from: SQLStatement, at: Int32, to: V) throws
 }
 
-public struct SQLBinder<Value> {
+public struct SQLBinder {
+//    typealias Value = Value
+    typealias Getter = (SQLStatement,Int32,Any) -> Void
+    public var name: String?
+    public let valueType: Any.Type
+    let getf: (SQLStatement,Int32) -> Any
+    let setf: Getter
+
+    public init<Value>(_ name: String? = nil,
+                valueType: Value.Type = Value.self,
+                getf: @escaping (SQLStatement, Int32) -> Value,
+                setf: @escaping (SQLStatement, Int32, Value) -> Void)
+    {
+        self.name = name
+        self.valueType = valueType
+        self.getf = getf
+        self.setf = {
+            setf($0, $1, $2 as! Value)
+        }
+    }
+}
+
+public struct _SQLBinder<Value> {
     typealias Value = Value
     public var name: String?
     public let valueType: Any.Type
@@ -61,12 +83,12 @@ extension SQLBinder: AnySQLBinder {
 
     public func set<V>(from s: SQLStatement, at ndx: Int32, to value: V) throws {
         guard type(of: value) == valueType else { throw "BAD" }
-        self.setf(s, ndx, value as! Value)
+        self.setf(s, ndx, value)
     }
 }
 
 extension FixedWidthInteger where Self: SQLBindable {
-    public static var defaultSQLBinder: SQLBinder<Self> { .init(
+    public static var defaultSQLBinder: SQLBinder { .init(
         getf: { Self(sqlite3_column_int64($0.ref, $1)) },
         setf: { sqlite3_bind_int64($0.ref, $1, Int64($2)) })
     }
@@ -77,7 +99,7 @@ extension Int32: SQLBindable {}
 extension Int64: SQLBindable {}
 
 extension BinaryFloatingPoint  where Self: SQLBindable {
-    public static var defaultSQLBinder: SQLBinder<Self> { .init(
+    public static var defaultSQLBinder: SQLBinder { .init(
         getf: { Self(sqlite3_column_double($0.ref, $1)) },
         setf: { sqlite3_bind_double($0.ref, $1, Double($2)) })
     }
@@ -89,17 +111,21 @@ extension Float64: SQLBindable {}
 public let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
 extension String: SQLBindable {
-    public static var defaultSQLBinder: SQLBinder<Self> { .init(
+    public static var defaultSQLBinder: SQLBinder { .init(
         getf: { String(cString: sqlite3_column_text($0.ref, $1)) },
         setf: { sqlite3_bind_text($0.ref, $1, $2, -1, SQLITE_TRANSIENT) })
     }
 }
 
 extension Data: SQLBindable {
-    public static var defaultSQLBinder: SQLBinder<Self> { .init(
-        getf: { $0.value(at: Int($1)) },
-        setf: {
-            sqlite3_bind_blob($0.ref, Int32($1), Array($2), Int32($2.count), SQLITE_TRANSIENT)
+    public static var defaultSQLBinder: SQLBinder { .init(
+        getf: {
+            let data: Data = $0.value(at: Int($1))
+            return data
+        },
+        setf: {(s, ndx, data: Data) in
+            sqlite3_bind_blob(s.ref, Int32(ndx),
+                Array(data), Int32(data.count), SQLITE_TRANSIENT)
         })
     }
 }

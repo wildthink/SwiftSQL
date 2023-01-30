@@ -237,7 +237,7 @@ public final class SQLStatement {
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
     public func column<T: SQLBindable>(at index: Int) -> T {
-        T.defaultSQLBinder.getf(self, Int32(index))
+        T.defaultSQLBinder.getf(self, Int32(index)) as! T
     }
 
     /// Returns a single column of the current result row of a query. If the
@@ -251,7 +251,7 @@ public final class SQLStatement {
         if sqlite3_column_type(ref, Int32(index)) == SQLITE_NULL {
             return nil
         } else {
-            return T.defaultSQLBinder.getf(self, Int32(index))
+            return T.defaultSQLBinder.getf(self, Int32(index)) as? T
         }
     }
 

@@ -7,7 +7,7 @@
 import Foundation
 import SQLite3
 import SwiftSQL
-
+/*
 public let SQLiteTransientStorage = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
 extension SQLError {
@@ -365,3 +365,6 @@ func set_sqlite3_result(_ sqlite_context: OpaquePointer!, value: SQLiteValue) {
 		sqlite3_result_null(sqlite_context)
 	}
 }
+
+*/
+
