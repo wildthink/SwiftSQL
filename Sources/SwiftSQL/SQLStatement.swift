@@ -296,8 +296,17 @@ public final class SQLStatement {
         }
     }
 
-    @_disfavoredOverload
-    public func value(at index: Int) -> Any? {
+    public var dictionaryValue: [String: Any] {
+        var dict: [String:Any] = .init()
+        for n in columnNames {
+            let value = self.anyValue(at: columnIndex(forName: n)!)
+            dict[n] = value
+        }
+        return dict
+    }
+
+//    @_disfavoredOverload
+    public func anyValue(at index: Int) -> Any? {
         let index = Int32(index)
         let type = sqlite3_column_type(ref, index)
         // switch (type, V.self) {

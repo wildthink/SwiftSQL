@@ -12,6 +12,8 @@ public protocol SQLBindable: Equatable {
     static var defaultSQLBinder: SQLBinder<Self> { get }
 }
 
+extension String: Error {}
+
 //struct BinderKey: CodingKey {
 //extension CodingKey: ExpressibleByStringLiteral {
 //    init?(literalString: String) {
@@ -52,8 +54,6 @@ public struct SQLBinder<Value> {
 extension SQLBinder: AnySQLBinder {
 
     public func get<V>(from s: SQLStatement, at ndx: Int32) throws -> V {
-//        guard V.self == valueType else { throw "BAD" }
-//        return self.getf(s, ndx) as! V
         let value = self.getf(s, ndx)
         guard type(of: value) == valueType else { throw "BAD" }
         return value as! V
@@ -134,16 +134,16 @@ extension SQLBinder {
     }
 }
 
-public extension AnySQLBinder {
-    static var id: Self { Int64.defaultSQLBinder.named("id") as! Self }
-}
+//public extension AnySQLBinder {
+//    static var id: Self { Int64.defaultSQLBinder.named("id") as! Self }
+//}
+//
+//func demo() {
+//    let b: [AnySQLBinder] = [
+//        Int.defaultSQLBinder,
+//        Int32.defaultSQLBinder,
+//        Float.defaultSQLBinder]
+//    print(b)
+//}
 
-func demo() {
-    let b: [AnySQLBinder] = [
-        Int.defaultSQLBinder,
-        Int32.defaultSQLBinder,
-        Float.defaultSQLBinder]
-    print(b)
-}
-
-extension String: Error {}
+//extension String: Error {}

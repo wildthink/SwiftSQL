@@ -3,11 +3,20 @@
     "pins": [
       {
         "package": "KeyValueCoding",
-        "repositoryURL": "https://github.com/ikhvorost/KeyValueCoding.git",
+        "repositoryURL": "https://github.com/wildthink/KeyValueCoding.git",
         "state": {
           "branch": null,
-          "revision": "b16c01ab628962628431492b3fff84e69c75f760",
-          "version": "1.0.0"
+          "revision": "69640864f3f3f6f8e0c8e6421e0ad53074c2c54f",
+          "version": "1.1.0"
+        }
+      },
+      {
+        "package": "swift-snapshot-testing",
+        "repositoryURL": "https://github.com/pointfreeco/swift-snapshot-testing",
+        "state": {
+          "branch": null,
+          "revision": "cef5b3f6f11781dd4591bdd1dd0a3d22bd609334",
+          "version": "1.11.0"
         }
       },
       {
