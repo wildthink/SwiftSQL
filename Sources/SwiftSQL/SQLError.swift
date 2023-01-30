@@ -14,19 +14,10 @@ public struct SQLError: Swift.Error {
     public var message: String
 
     init?(code: Int32, db: OpaquePointer) {
-        print(code, SQLITE_OK, SQLITE_DONE, SQLITE_ROW)
-        switch code {
-        case SQLITE_OK: return nil
-        case SQLITE_DONE: return nil
-        case SQLITE_ROW: return nil
-        default:
-            self.code = code
-            self.message = String(cString: sqlite3_errmsg(db))
-        }
-//        guard !(code == SQLITE_ROW || code == SQLITE_OK || code == SQLITE_DONE) else { return nil }
-//
-//        self.code = code
-//        self.message = String(cString: sqlite3_errmsg(db))
+        guard !(code == SQLITE_ROW || code == SQLITE_OK || code == SQLITE_DONE) else { return nil }
+
+        self.code = code
+        self.message = String(cString: sqlite3_errmsg(db))
     }
 
     public init(code: Int32, message: String) {

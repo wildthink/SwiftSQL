@@ -1,1 +1,4 @@
-- Optional<SQLError>.none
+▿ Optional<SQLError>
+  ▿ some: SQLError
+    - code: 666
+    - message: "not an error"
