@@ -176,6 +176,8 @@ public final class SQLStatement {
     // Future release will include the use of alternate SQLBinders
 //    private func _bind(_ value: (any SQLBindable)?, at index: Int) throws {
     private func _bind(_ value: Any?, at index: Int) throws {
+        let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
         let index = Int32(index)
         if value == nil {
             sqlite3_bind_null(ref, index)
@@ -232,7 +234,7 @@ public final class SQLStatement {
         Int(sqlite3_bind_parameter_count(ref))
     }
 
-    // MARK: Accessing Columns
+    // MARK: Accessing Column Values
 
     /// Returns a single column of the current result row of a query.
     ///
@@ -240,9 +242,13 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-//    public func column<T: SQLBindable>(at index: Int) -> T {
-//        T.defaultSQLBinder.getf(self, Int32(index)) as! T
-//    }
+    public func value<T: SQLiteBindable>(at index: Int) throws -> T {
+        try T.defaultSQLBinder.getf(self, index) as! T
+    }
+
+    public func value<T: SQLiteBindable>(at index: Int) throws -> T? {
+        try T.defaultSQLBinder.getf(self, index) as? T
+    }
 
     /// Returns a single column of the current result row of a query. If the
     /// value is `Null`, returns `nil.`
