@@ -41,20 +41,38 @@ final class SQLUnitTests: XCTestCase {
         """)
 
         // WHEN
+        let d = "foo".data(using: .ascii)!
+        
+        try Int.defaultSQLBinder.setf(insert, 0, 80)
+        try Double.defaultSQLBinder.setf(insert, 3, 43.5)
+        try String.defaultSQLBinder.setf(insert, 1, "Alex")
+        try Data.defaultSQLBinder.setf(insert, 4, d)
+
         try insert
             .bind(80, at: 0)
             .bind("Alex", at: 1)
             .bind(66, at: 2)
             .bind(43.5, at: 3)
-            .bind("foo".data(using: .ascii), at: 4)
+            .bind(d, at: 4)
             .execute()
 
         // THEN
+        let last = db.lastInsertRowID
+        XCTAssert(last == 80)
+
+        let count = insert.bindParameterCount
+        XCTAssert(count == 5)
+        
         let select = try db.prepare("SELECT * FROM test")
         XCTAssertTrue(try select.step())
         let row = select.dictionaryValue
         assertSnapshot(matching: row, as: .dump)
 
+        let b = String?.defaultSQLBinder
+        print(b.valueType)
+        if let strp: String = try select.value(at: 1) {
+            print (strp)
+        }
         let data: Data = try select.value(at: 4)
         let str: String = try select.value(at: 1)
         let real: Double = try select.value(at: 3)
@@ -98,6 +116,8 @@ final class SQLUnitTests: XCTestCase {
 
         XCTAssertTrue(didCommit)
         XCTAssertTrue(didRollback)
+        
+        db.interrupt()
         print ("Pass", #function)
     }
 
@@ -108,9 +128,8 @@ final class SQLUnitTests: XCTestCase {
             Int32.defaultSQLBinder,
             Float.defaultSQLBinder]
 
-        let id = Int64.defaultSQLBinder.named("id")
-        print(id)
-//        assertSnapshot(matching: id, as: .dump)
+        let id: SQLBinder = .id
+        assertSnapshot(matching: id, as: .dump)
         assertSnapshot(matching: b, as: .dump)
     }
 

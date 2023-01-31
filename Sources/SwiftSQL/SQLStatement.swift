@@ -113,7 +113,7 @@ public final class SQLStatement {
     @discardableResult
     public func bind(_ parameters: [(any SQLBindable)?]) throws -> Self {
         for (index, value) in zip(parameters.indices, parameters) {
-            try _bind(value, at: Int(index + 1))
+            try bind(value: value, at: Int(index + 1))
         }
         return self
     }
@@ -143,7 +143,7 @@ public final class SQLStatement {
     /// - parameter name: The name of the parameter. If the name is missing, throws
     /// an error.
     @discardableResult
-    public func bind<B: SQLBindable>(_ value: B?, for name: String) throws -> Self {
+    public func bind<B: SQLiteBindable>(_ value: B?, for name: String) throws -> Self {
         try _bind(value, for: name)
         return self
     }
@@ -153,7 +153,7 @@ public final class SQLStatement {
     /// - parameter index: The index starts at 0.
     @discardableResult
     public func bind<B: SQLBindable>(_ value: B?, at index: Int) throws -> Self {
-        try _bind(value, at: (index + 1))
+        try bind(value: value, at: (index + 1))
         return self
     }
 
@@ -162,20 +162,20 @@ public final class SQLStatement {
         guard index > 0 else {
             throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
         }
-        try _bind(value, at: Int(index))
+        try bind(value: value, at: Int(index))
     }
 
-    private func _bind<B: SQLBindable>(_ value: B?, for name: String) throws {
-        let index = sqlite3_bind_parameter_index(ref, name)
-        guard index > 0 else {
-            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
-        }
-        try _bind(value, at: Int(index))
-    }
+//    private func _bind<B: SQLBindable>(_ value: B?, for name: String) throws {
+//        let index = sqlite3_bind_parameter_index(ref, name)
+//        guard index > 0 else {
+//            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
+//        }
+//        try _bind(value, at: Int(index))
+//    }
 
     // Future release will include the use of alternate SQLBinders
 //    private func _bind(_ value: (any SQLBindable)?, at index: Int) throws {
-    private func _bind(_ value: Any?, at index: Int) throws {
+    public func bind(value: Any?, at index: Int) throws {
         let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
         let index = Int32(index)
@@ -198,6 +198,9 @@ public final class SQLStatement {
         else if let value = value as? (any StringProtocol) {
             sqlite3_bind_text(ref, index, String(value),
                               -1, SQLITE_TRANSIENT)
+        }
+        else {
+            throw SQLError(code: #line, message: "Cannot bind value of type \(type(of: value))")
         }
     }
 
@@ -242,11 +245,17 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-    public func value<T: SQLiteBindable>(at index: Int) throws -> T {
+    public func value<T: SQLiteBindable>(
+        at index: Int,
+        as t: T.Type = T.self)
+    throws -> T {
         try T.defaultSQLBinder.getf(self, index) as! T
     }
 
-    public func value<T: SQLiteBindable>(at index: Int) throws -> T? {
+    public func value<T: SQLiteBindable>(
+        at index: Int,
+        as t: T.Type = T.self)
+    throws -> T? {
         try T.defaultSQLBinder.getf(self, index) as? T
     }
 
