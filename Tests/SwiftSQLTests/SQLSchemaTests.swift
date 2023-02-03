@@ -24,6 +24,32 @@ final class SQLSchemaTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
+    func testInstantiate() throws {
+        let db = try! SQLConnection(location: .memory())
+        try db.execute("CREATE TABLE Test (name TEXT, ndx INT)")
+        
+        // WHEN/THEN binds the value
+        try db.prepare("INSERT INTO Test (name, ndx) VALUES (?, ?)")
+            .bind("alpha", 1)
+            .execute()
+        
+        // WHEN/THEN reads the value
+        let statement = try db.prepare("SELECT name, ndx FROM Test")
+        XCTAssertTrue(try statement.step())
+        struct S: ExpressibleByDefault {
+            var name: String
+            var ndx: Int
+            
+            init(defaultContext: ()) {
+                name = ""
+                ndx = 0
+            }
+        }
+        let s = Schema(for: S.self)
+        let v: S = try s.instantiate(from: statement)
+        print(v)
+    }
+
     func testMD() throws {
         let md = swift_metadata(of: Schema.self)
         print(md)
@@ -35,12 +61,12 @@ final class SQLSchemaTests: XCTestCase {
      }
     
     func testSchema() throws {
-        let s = Schema(for: Person.self)
-        print(s.sql(create: "person"))
-        print(s.sql(insert: "person"))
+//        let p: Person = .defaultValue()
+//        print(p)
         
-//        assertSnapshot(matching: s.sql(create: "person"), as: .dump)
-//        assertSnapshot(matching: s.sql(insert: "person"), as: .dump)
+        let s = Schema(for: Person.self)
+        assertSnapshot(matching: s.sql(create: "person"), as: .lines)
+        assertSnapshot(matching: s.sql(insert: "person"), as: .lines)
     }
 
 }
@@ -51,4 +77,10 @@ struct Person {
     var dob: Date?
     var tags: [String]
     var friends: [Person]
+}
+
+extension Person: ExpressibleByDefault {
+    init(defaultContext: ()) {
+        self = .init(name: "", date: .distantPast, tags: [], friends: [])
+    }
 }

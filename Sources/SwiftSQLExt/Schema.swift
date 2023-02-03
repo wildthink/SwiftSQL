@@ -7,34 +7,15 @@
 
 import Foundation
 import KeyValueCoding
+import SwiftSQL
 
-public extension Metadata {
-    var isOptional: Bool { kind == .optional }
+public protocol ExpressibleByDefault {
+    init(defaultContext: ())
 }
 
-extension Metadata.Property {
-    var isOptional: Bool { metadata.isOptional }
-}
-
-protocol OptionalProtocol {
-    static var honestType: Any.Type { get }
-}
-
-extension Optional: OptionalProtocol {
-    static var honestType: Any.Type { Wrapped.self }
-}
-
-protocol ArrayProtocol {
-    static var elementType: Any.Type { get }
-    static func empty() -> Self
-}
-
-extension Array: ArrayProtocol {
-    static var elementType: Any.Type {
-        Element.self
-    }
-    static func empty() -> Array<Element> {
-        Self()
+public extension ExpressibleByDefault {
+    static func defaultValue() -> Self {
+        .init(defaultContext: ())
     }
 }
 
@@ -45,6 +26,31 @@ public struct Schema {
     var md: Metadata { swift_metadata(of: valueType) }
 }
 
+public extension Schema {
+    func instantiate<T: ExpressibleByDefault>(
+        _ type: T.Type = T.self,
+        from stm: SQLStatement,
+        strict: Bool = true
+    ) throws -> T {
+        guard valueType is T.Type else {
+            throw SQLError(code: #line, message: "Cannot instantiate \(type)")
+        }
+        var it: T = .defaultValue()
+        
+        for p in md.properties {
+            var v: Any?
+            if strict {
+                v = try stm.value(named: p.name, as: p.metadata.type)
+            } else {
+                v = try? stm.value(named: p.name, as: p.metadata.type)
+            }
+            swift_setValue(v, to: &it, key: p.name)
+        }
+        return it
+    }
+}
+
+// MARK: - SQLite Related Extensions
 extension Schema {
     
     func type_decl(for md: Metadata) -> String {
@@ -118,6 +124,37 @@ public extension Schema {
             ");"
         }
         .joined(separator: "\n")
+    }
+}
+
+// MARK: - Helper and Extensions
+public extension Metadata {
+    var isOptional: Bool { kind == .optional }
+}
+
+extension Metadata.Property {
+    var isOptional: Bool { metadata.isOptional }
+}
+
+protocol OptionalProtocol {
+    static var honestType: Any.Type { get }
+}
+
+extension Optional: OptionalProtocol {
+    static var honestType: Any.Type { Wrapped.self }
+}
+
+protocol ArrayProtocol {
+    static var elementType: Any.Type { get }
+    static func empty() -> Self
+}
+
+extension Array: ArrayProtocol {
+    static var elementType: Any.Type {
+        Element.self
+    }
+    static func empty() -> Array<Element> {
+        Self()
     }
 }
 

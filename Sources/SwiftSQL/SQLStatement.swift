@@ -354,9 +354,37 @@ public final class SQLStatement {
         }
         return dict
     }
+    
+    public func value(named: String, as vtype: Any.Type) throws -> Any {
+        guard let ndx = columnIndex(forName: named)
+        else { throw SQLError(code: #line, message: "No column named '\(named)'") }
+        return try value(at: ndx, as: vtype)
+    }
+    
+    public func value(at ndx: Int, as vtype: Any.Type) throws -> Any {
+        if let bv = vtype as? any SQLBindable.Type {
+            return try bv.defaultSQLBinder.getf(self, ndx)
+        }
+        let value = anyValue(at: ndx) as Any
+        if type(of: value) == vtype {
+            return value
+        }
+        throw SQLError(code: #line, message: "Error reading column at '\(ndx)'")
+    }
+    
+//    public func anyValue(named: String) throws -> Any? {
+//        guard let ndx = columnIndex(forName: named)
+//        else { throw SQLError(code: #line, message: "No column named '\(named)'") }
+//        return self.anyValue(at: ndx)
+//    }
 
 //    @_disfavoredOverload
+//    public func anyValue(at index: Int) -> Any? {
+//
+//    }
+    
     public func anyValue(at index: Int) -> Any? {
+
         let index = Int32(index)
         let type = sqlite3_column_type(ref, index)
         // switch (type, V.self) {

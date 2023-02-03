@@ -21,12 +21,12 @@ extension Optional: SQLBindable where Wrapped: SQLBindable {
 }
 
 public struct SQLBinder {
-    typealias Getter = (SQLStatement, Int) throws -> Any
-    typealias Setter = (SQLStatement, Int, Any) throws -> Void
+    public typealias Getter = (SQLStatement, Int) throws -> Any
+    public typealias Setter = (SQLStatement, Int, Any) throws -> Void
     public var name: String?
     public let valueType: Any.Type
-    let getf: Getter
-    let setf: Setter
+    public let getf: Getter
+    public let setf: Setter
 
     public init<Value>(_ name: String? = nil,
                 valueType: Value.Type = Value.self,
