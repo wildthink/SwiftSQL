@@ -17,7 +17,8 @@ protocol Entity {}
 final class SQLSchemaTests: XCTestCase {
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+        // Set `isRecording` to reset Snapshots
+//        isRecording = true
     }
 
     override func tearDownWithError() throws {
@@ -98,25 +99,86 @@ final class SQLSchemaTests: XCTestCase {
         assertSnapshot(matching: v, as: .dump)
     }
 
-//    func testMD() throws {
-//        let md = swift_metadata(of: Schema.self)
-//        print(md)
-//        let t = md.type == Int.self
-//        print(t)
-//        for p in md.properties {
-//            print(p.name, p.metadata.kind == .optional)
-//        }
-//     }
+    func testTopic() throws {
+        let db = try! SQLConnection(location: .memory())
+        let s = Schema(for: Topic.self)
+
+        let sql = s.sql(create: "topic")
+        print(sql)
+        try db.execute(sql)
+
+        let insert = try db.prepare(s.sql(insert: "topic"))
+        
+            try insert
+                .bind(1, "alpha", 23)
+                .execute()
+
+        let select = try db.prepare(s.sql(select: "topic"))
+
+        while try select.step() {
+            let t: Topic = try s.instantiate(from: select, strict: false)
+            print (t)
+        }
+        
+        var t1  = Topic(id: 2, name: "beta", value: 43)
+        try insert.reset()
+        try insert
+            .bind(&t1)
+            .execute()
+
+        var t2  = Topic(id: 3, name: "charlie", value: nil)
+        try insert.reset()
+        try insert
+            .bind(&t2)
+            .execute()
+
+        try select.reset()
+        var results = [Any]()
+        
+        while try select.step() {
+            let t: Topic = try s.instantiate(from: select, strict: false)
+            results.append(t)
+            print (t)
+        }
+                
+        assertSnapshot(matching: results, as: .dump)
+     }
     
-    func testSchema() throws {
+    func testSchemaSQLCreate() throws {
         let s = Schema(for: Person.self)
         assertSnapshot(matching: s.sql(create: "person"), as: .lines)
+    }
+    
+    func testSchemaSQLSelect() throws {
+        let s = Schema(for: Person.self)
+        assertSnapshot(matching: s.sql(select: "person"), as: .lines)
+    }
+
+    func testSchemaSQLInsert() throws {
+        let s = Schema(for: Person.self)
         assertSnapshot(matching: s.sql(insert: "person"), as: .lines)
     }
 
 }
 
+//            let v = _swift_getKeyPath(pattern: , arguments: )
+
+struct Topic {
+    var id: Int64
+    var name: String
+    var value: Int?
+}
+
+extension Topic: ExpressibleByDefault {
+    init(defaultContext: ()) {
+        id = 0
+        name = ""
+        value = nil
+    }
+}
+
 struct Person {
+    var id: Int64
     var name: String
     var date: Date
     var dob: Date?
@@ -126,6 +188,6 @@ struct Person {
 
 extension Person: ExpressibleByDefault {
     init(defaultContext: ()) {
-        self = .init(name: "", date: .distantPast, tags: [], friends: [])
+        self = .init(id: 0, name: "", date: .distantPast, tags: [], friends: [])
     }
 }

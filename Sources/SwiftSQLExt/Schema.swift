@@ -20,10 +20,17 @@ public extension ExpressibleByDefault {
 }
 
 public struct Schema {
+    public typealias ID = Int64
     var name: String
-    var int: Int?
     var valueType: Any.Type
     var md: Metadata { swift_metadata(of: valueType) }
+}
+
+public extension Schema {
+    init(_ name: String? = nil, for t: Any.Type) {
+        self.valueType = t
+        self.name = name ?? String(describing: t)
+    }
 }
 
 public extension Schema {
@@ -51,6 +58,85 @@ public extension Schema {
 }
 
 // MARK: - SQLite Related Extensions
+public extension Schema {
+    
+    /*
+    INSERT INTO table (column1,column2 ,..)
+    VALUES( value1,    value2 ,...);
+    
+    INSERT OR REPLACE INTO table(column_list)
+    VALUES(value_list);
+    
+    REPLACE INTO table(column_list)
+    VALUES(value_list);
+    
+    UPDATE test SET (foo, bar) = ( 8, 9 )
+    
+    UPDATE users
+    SET field1='value1',
+    field2='value2',
+    field3='value3'
+    WHERE field1=1
+    
+    -- UPSERT
+    CREATE TABLE phonebook2(
+        name TEXT PRIMARY KEY,
+        phonenumber TEXT,
+        validDate DATE
+    );
+    INSERT INTO phonebook2(name,phonenumber,validDate)
+    VALUES('Alice','704-555-1212','2018-05-08')
+    ON CONFLICT(name) DO UPDATE SET
+    phonenumber=excluded.phonenumber,
+    validDate=excluded.validDate
+    WHERE excluded.validDate>phonebook2.validDate;
+    */
+
+    /**
+    CREATE TABLE phonebook2(
+        name TEXT PRIMARY KEY,
+        phonenumber TEXT,
+        validDate DATE
+    );
+     */
+    func sql(create table: String, pkey: String = "id") -> String {
+        [String]() {
+            "CREATE TABLE \(table) ("
+            for p in md.properties {
+                Joined(with: "") {
+                    "\t" + sql_decl(for: p)
+                    if p.name == pkey { " PRIMARY KEY"}
+                    if p.name != md.properties.last?.name { "," }
+//                        .append(",", if: { p.name != md.properties.last?.name })
+                    
+                }
+            }
+            ")"
+        }
+        .joined(separator: "\n")
+    }
+    
+    func sql(select table: String) -> String {
+        [String]() {
+            "SELECT"
+            md.properties.map(\.name).joined(separator: ", ")
+            "FROM \(table)"
+        }
+        .joined(separator: " ")
+    }
+    
+    func sql(insert table: String) -> String {
+        [String]() {
+            "INSERT INTO \(table) ("
+            md.properties.map(\.name).joined(separator: ", ")
+            ") VALUES ("
+            String(repeating: "?, ", count: md.properties.count - 1)
+            "?)"
+        }
+        .joined(separator: " ")
+    }
+}
+
 extension Schema {
     
     func type_decl(for md: Metadata) -> String {
@@ -72,7 +158,7 @@ extension Schema {
                 return type_decl(for: swift_metadata(of: it.honestType))
                 
             default:
-                return ""
+                return "JSON"
         }
     }
     
@@ -89,6 +175,34 @@ extension Schema {
     }
 }
 
+// MARK: - SQLStatement Extensions
+public extension SQLStatement {
+    
+    func bind<T>(_ nob: inout T) throws -> SQLStatement {
+        var params = [(any SQLBindable)?]()
+        let md = swift_metadata(of: nob)
+        for p in md.properties {
+            let v = swift_value(of: &nob, key: p.name)
+            if let v = v as? (any SQLBindable) {
+                params.append(v)
+            } else {
+                params.append(nil)
+            }
+        }
+        try self.bind(params)
+        return self
+    }
+}
+
+// MARK: - Metadata Extensions
+extension Metadata.Property: Hashable {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name
+    }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+    }
+}
 
 //func Line(@ArrayBuilder<String> f: () -> [String]) -> String {
 //    f().joined(separator: "")
@@ -96,35 +210,6 @@ extension Schema {
 
 public func Joined(with sep: String = "", @ArrayBuilder<String> f: () -> [String]) -> String {
     f().joined(separator: sep)
-}
-
-public extension Schema {
-    
-    func sql(create table: String) -> String {
-        [String]() {
-            "CREATE TABLE \(table) ("
-            for p in md.properties {
-                "\t" + sql_decl(for: p)
-                    .append(",", if: { p.name != md.properties.last?.name })
-            }
-            ");"
-        }
-        .joined(separator: "\n")
-    }
-    
-    func sql(insert table: String) -> String {
-        [String]() {
-            "INSERT INTO \(table)"
-            Joined(with: ",") {
-                tab()
-                for p in md.properties {
-                    p.name
-                }
-            }
-            ");"
-        }
-        .joined(separator: "\n")
-    }
 }
 
 // MARK: - Helper and Extensions
@@ -180,13 +265,6 @@ public extension String {
         cond() ? fn(self) : self
     }
     
-}
-
-public extension Schema {
-    init(_ name: String? = nil, for t: Any.Type) {
-        self.valueType = t
-        self.name = name ?? String(describing: t)
-    }
 }
 
 public extension Array {

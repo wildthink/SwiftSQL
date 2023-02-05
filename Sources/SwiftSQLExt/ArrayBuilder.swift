@@ -37,6 +37,9 @@ public enum ArrayBuilder<Element> {
     public static func buildExpression(_ expression: Expression) -> Component {
         [expression]
     }
+    public static func buildExpression(_ expression: [Expression]) -> Component {
+        expression
+    }
     public static func buildBlock(_ component: Component) -> Component {
         component
     }
