@@ -1,0 +1,1 @@
+SELECT id, name, date, dob, tags, friends FROM person

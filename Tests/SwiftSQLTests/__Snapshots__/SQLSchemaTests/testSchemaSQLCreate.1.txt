@@ -1,0 +1,8 @@
+CREATE TABLE person (
+	id INT NOT NULL PRIMARY KEY,
+	name TEXT NOT NULL,
+	date DATE NOT NULL,
+	dob DATE,
+	tags LIST NOT NULL,
+	friends LIST NOT NULL
+)
