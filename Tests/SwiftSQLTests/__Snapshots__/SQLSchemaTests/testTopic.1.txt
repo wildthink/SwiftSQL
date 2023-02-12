@@ -1,16 +1,10 @@
 ▿ 3 elements
   ▿ Topic
-    - id: 1
+    - id: "1"
     - name: "alpha"
-    ▿ value: Optional<Int>
-      - some: 23
   ▿ Topic
-    - id: 2
+    - id: "10"
     - name: "beta"
-    ▿ value: Optional<Int>
-      - some: 43
   ▿ Topic
-    - id: 3
+    - id: "20"
     - name: "charlie"
-    ▿ value: Optional<Int>
-      - some: 0

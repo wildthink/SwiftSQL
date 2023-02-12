@@ -96,10 +96,50 @@ public extension SQLConnection {
 typealias UpdateHookCallback =
     (UnsafeMutableRawPointer?, Int32, UnsafePointer<Int8>?, UnsafePointer<Int8>?, Int64) -> Void
 
-class Hook {
+
+import SwiftUI
+import Combine
+
+public class Hook {
+    enum Event { case didRollback, didCommit, didUpdate(SQLConnection.UpdateInfo) }
+
     var update: UpdateHookCallback?
     var commit: (() -> Void)?
     var rollback: (() -> Void)?
+    var _publisher: PassthroughSubject<Event, Never> = .init()
+    
+    public init() {
+    }
+    
+    func publisher() -> AnyPublisher<Event, Never> {
+        _publisher.eraseToAnyPublisher()
+    }
+    
+    func registerHandlers(_ db: SQLConnection) {
+        db.createCommitHandler { [weak self] in
+            self?._publisher.send(.didCommit)
+        }
+        db.createRollbackHandler { [weak self] in
+            self?._publisher.send(.didRollback)
+        }
+        db.createUpdateHandler { [weak self] in
+            self?._publisher.send(.didUpdate($0))
+        }
+    }
+}
+
+//open class Hook {
+//
+//    public init() {
+//
+//    }
+//
+//    func registerHandlers(_ db: SQLConnection) {
+//    }
+//}
+
+public extension Hook {
+    static var `default`: Hook = Hook()
 }
 
 func updateHookWrapper(

@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "SwiftSQL",
     platforms: [
-        .macOS(.v11),
+        .macOS(.v13),
         .iOS(.v14),
         .tvOS(.v11),
         .watchOS(.v4)

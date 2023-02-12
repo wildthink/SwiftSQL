@@ -178,6 +178,12 @@ extension Schema {
 // MARK: - SQLStatement Extensions
 public extension SQLStatement {
     
+    @_disfavoredOverload
+    func bind<T>(_ nob: T) throws -> SQLStatement {
+        var copy = nob
+        return try bind(&copy)
+    }
+    
     func bind<T>(_ nob: inout T) throws -> SQLStatement {
         var params = [(any SQLBindable)?]()
         let md = swift_metadata(of: nob)

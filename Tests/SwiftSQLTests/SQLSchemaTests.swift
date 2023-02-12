@@ -120,16 +120,16 @@ final class SQLSchemaTests: XCTestCase {
             print (t)
         }
         
-        var t1  = Topic(id: 2, name: "beta", value: 43)
-        try insert.reset()
+        let t1  = Topic(id: "10", name: "beta")
         try insert
-            .bind(&t1)
+            .reset()
+            .bind(t1)
             .execute()
 
-        var t2  = Topic(id: 3, name: "charlie", value: nil)
-        try insert.reset()
+        let t2  = Topic(id: "20", name: "charlie")
         try insert
-            .bind(&t2)
+            .reset()
+            .bind(t2)
             .execute()
 
         try select.reset()
@@ -161,19 +161,57 @@ final class SQLSchemaTests: XCTestCase {
 
 }
 
+//extension UUID {
+//    static func preview(_ ndx: Int) -> UUID {
+//        return .init(uuidString: "\ndx")!
+//    }
+//}
 //            let v = _swift_getKeyPath(pattern: , arguments: )
 
-struct Topic {
-    var id: Int64
-    var name: String
-    var value: Int?
+struct TopicQuery: EntityQuery {
+    func entities(for identifiers: [Topic.ID]) async throws -> [Topic] {
+        .init()
+    }
 }
+
+/*
+ func suggestedEntities() async throws -> [AlbumEntity] {
+ try await MusicCatalog.shared.favoriteAlbums()
+ .map { AlbumEntity(id: $0.id, albumName: $0.name) }
+ }
+ 
+ */
+import AppIntents
+
+@available(macOS 13.0, *)
+struct Topic: AppEntity {
+    typealias ID = String
+    static var defaultQuery: TopicQuery = .init()
+    
+    var id: ID
+    var name: String
+    
+    static var typeDisplayRepresentation: TypeDisplayRepresentation {
+        "Topic"
+    }
+    
+    var displayRepresentation: DisplayRepresentation {
+        .init(title: LocalizedStringResource(stringLiteral: name))
+    }
+    
+}
+
+//struct Topic {
+//    var id: Int64
+//    var name: String
+//    var value: Int?
+//}
 
 extension Topic: ExpressibleByDefault {
     init(defaultContext: ()) {
-        id = 0
+        id = .init()
         name = ""
-        value = nil
+//        value = nil
     }
 }
 
