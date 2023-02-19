@@ -175,6 +175,29 @@ extension Schema {
     }
 }
 
+// MARK: - SQLConnection Extensions
+public struct SQLCursor<T: ExpressibleByDefault> {
+    var stmt: SQLStatement
+    public func next() throws -> T? {
+        guard try stmt.step() else { return nil }
+        return try stmt.instantiate(T.self)
+    }
+}
+
+public extension SQLConnection {
+    func select<T: ExpressibleByDefault>(
+        _ type: T.Type = T.self,
+        from table: String
+    ) throws -> SQLCursor<T> {
+        let sc = Schema(for: T.self)
+        let sql = sc.sql(select: table)
+        print(#function, sql)
+        let select = try prepare(sql)
+        return SQLCursor(stmt: select)
+    }
+}
+
+
 // MARK: - SQLStatement Extensions
 public extension SQLStatement {
     
@@ -197,6 +220,46 @@ public extension SQLStatement {
         }
         try self.bind(params)
         return self
+    }
+    
+    func instantiate<T: ExpressibleByDefault>(
+        _ type: T.Type = T.self,
+        strict: Bool = false
+    ) throws -> T? {
+        
+        var it: T = .defaultValue()
+        let md = swift_metadata(of: T.self)
+        
+        for p in md.properties {
+            var v: Any?
+            if strict {
+                v = try self.value(named: p.name, as: p.metadata.type)
+            } else {
+                v = try? self.value(named: p.name, as: p.metadata.type)
+            }
+            swift_setValue(v, to: &it, key: p.name)
+        }
+        return it
+    }
+
+    func instantiate<T: ExpressibleByDefault>(
+        _ type: T.Type = T.self,
+        strict: Bool = false
+    ) throws -> T {
+
+        var it: T = .defaultValue()
+        let md = swift_metadata(of: T.self)
+        
+        for p in md.properties {
+            var v: Any?
+            if strict {
+                v = try self.value(named: p.name, as: p.metadata.type)
+            } else {
+                v = try? self.value(named: p.name, as: p.metadata.type)
+            }
+            swift_setValue(v, to: &it, key: p.name)
+        }
+        return it
     }
 }
 

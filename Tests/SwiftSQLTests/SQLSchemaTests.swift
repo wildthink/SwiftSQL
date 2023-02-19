@@ -103,16 +103,19 @@ final class SQLSchemaTests: XCTestCase {
         let db = try! SQLConnection(location: .memory())
         let s = Schema(for: Topic.self)
 
+        // CREATE
         let sql = s.sql(create: "topic")
         print(sql)
         try db.execute(sql)
 
+        // INSERT
         let insert = try db.prepare(s.sql(insert: "topic"))
         
             try insert
                 .bind(1, "alpha", 23)
                 .execute()
 
+        // SELECT
         let select = try db.prepare(s.sql(select: "topic"))
 
         while try select.step() {
@@ -142,7 +145,48 @@ final class SQLSchemaTests: XCTestCase {
         }
                 
         assertSnapshot(matching: results, as: .dump)
+        
+        let curs = try db.select(Topic.self, from: "topic")
+        while let row = try curs.next() {
+            print(row)
+        }
      }
+    
+    func testPragma() throws {
+        let db = try! SQLConnection(location: .memory())
+        let ts = Schema(for: Topic.self)
+        
+        // CREATE
+        let sql = ts.sql(create: "topic")
+        try db.execute(sql)
+
+        let info = try db.prepare("PRAGMA table_info(topic)")
+
+        while try info.step() {
+            do {
+                let t: Table = try info.instantiate(strict: false)
+                print (t)
+            } catch {
+                let p = info.dictionaryValue
+                print (error, p)
+            }
+        }
+    }
+    
+    func testTableInfo() throws {
+        let db = try! SQLConnection(location: .memory())
+        let ts = Schema(for: Topic.self)
+        
+        // CREATE
+        let sql = ts.sql(create: "topic")
+        try db.execute(sql)
+
+        // ERROR notnull is keyword
+        let curs = try db.select(Table.self, from: "pragma_table_info('topic')")
+        while let r = try curs.next() {
+            print(r)
+        }
+    }
     
     func testSchemaSQLCreate() throws {
         let s = Schema(for: Person.self)
@@ -159,6 +203,32 @@ final class SQLSchemaTests: XCTestCase {
         assertSnapshot(matching: s.sql(insert: "person"), as: .lines)
     }
 
+//    func testMeta() throws {
+//        let t = Table(defaultContext: ())
+//        let md: _MetadataKind?
+//        
+//        _forEachField(of: t) {
+//            print($0)
+//        }
+//    }
+}
+
+struct Table: ExpressibleByDefault {
+    init(defaultContext: ()) {
+        cid = 0
+        name = ""
+        type = ""
+        notnull = false
+        dflt_value = nil
+        pk = false
+    }
+    
+    var cid: Int64
+    var name: String
+    var type: String
+    var notnull: Bool
+    var dflt_value: Any?
+    var pk: Bool
 }
 
 //extension UUID {
