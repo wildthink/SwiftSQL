@@ -106,6 +106,12 @@ public final class SQLConnection {
          try? close()
      }
 
+    // MARK:
+    /// [Executes](https://www.sqlite.org/c3ref/changes.html) to return the number of rows changed by the most recent statement.
+    public var lastChangeCount: Int64 {
+        sqlite3_changes64(ref)
+    }
+
     // MARK: Execute
 
     /// [Executes](https://www.sqlite.org/c3ref/exec.html) the given one-shot SQL statement.

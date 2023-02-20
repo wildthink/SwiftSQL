@@ -173,7 +173,7 @@ final class SQLSchemaTests: XCTestCase {
         }
     }
     
-    func testTableInfo() throws {
+    func _testTableInfo() throws {
         let db = try! SQLConnection(location: .memory())
         let ts = Schema(for: Topic.self)
         

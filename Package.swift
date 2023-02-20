@@ -14,6 +14,7 @@ let package = Package(
     products: [
         .library(name: "SwiftSQL", targets: ["SwiftSQL"]),
         .library(name: "SwiftSQLExt", targets: ["SwiftSQLExt"]),
+        .library(name: "SwiftSQLTesting", targets: ["SwiftSQLTesting"]),
     ],
     dependencies: [
 //        .package(url: "https://github.com/wildthink/uniqueid", .upToNextMajor(from: "1.0.0")),
@@ -34,10 +35,17 @@ let package = Package(
             dependencies: [
                 "SwiftSQL",
                 "SwiftSQLExt",
+                "SwiftSQLTesting",
                 .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
                 .product(name: "KeyValueCoding", package: "KeyValueCoding"),
             ]
         ),
+         .target(
+            name: "SwiftSQLTesting",
+            dependencies: [
+                .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+            ]
+         ),
         .target(
             name: "SwiftSQLExt",
             dependencies: [
@@ -50,6 +58,7 @@ let package = Package(
             dependencies: [
                 "SwiftSQL",
                 "SwiftSQLExt",
+                "SwiftSQLTesting",
                 .product(name: "KeyValueCoding", package: "KeyValueCoding"),
             ]
         ),

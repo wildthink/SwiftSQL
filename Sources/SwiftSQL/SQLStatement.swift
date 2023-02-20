@@ -355,6 +355,18 @@ public final class SQLStatement {
         return dict
     }
     
+    public var keyValuePairs: [(key: String, value: Any)] {
+        var dict: [(key: String, value: Any)] = .init()
+        for n in columnNames {
+            if let value = self.anyValue(at: columnIndex(forName: n)!) {
+                dict.append((n, value))
+            } else {
+                dict.append((n, "nil"))
+            }
+        }
+        return dict
+    }
+    
     public func value(named: String, as vtype: Any.Type) throws -> Any {
         guard let ndx = columnIndex(forName: named)
         else { throw SQLError(code: #line, message: "No column named '\(named)'") }

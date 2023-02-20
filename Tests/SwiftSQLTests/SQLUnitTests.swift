@@ -8,6 +8,8 @@
 import SnapshotTesting
 import XCTest
 @testable import SwiftSQL
+@testable import SwiftSQLTesting
+
 import SQLite3
 
 final class SQLUnitTests: XCTestCase {
@@ -20,48 +22,24 @@ final class SQLUnitTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
-    func testSelect() throws {
-        /// GIVEN
+    func testDBSnapshot() throws {
         let db = try SQLConnection(location: .memory())
-        try db.execute("""
-         CREATE TABLE test
-        (
-            Id INTEGER PRIMARY KEY NOT NULL,
-            Name VARCHAR,
-            Level INTEGER,
-            number REAL,
-            thunk BLOB
-        )
+        try populate(db: db)
+        assertSnapshot(matching: db, as: .dbDumpTable("test"))
+    }
+    
+    func testSelect() throws {
 
-        """)
-
-        let insert = try db.prepare("""
-        INSERT INTO test (id, level, name, number, thunk)
-        VALUES (?, ?, ?, ?, ?)
-        """)
-
-        // WHEN
-        let d = "foo".data(using: .ascii)!
+        let db = try SQLConnection(location: .memory())
+        try populate(db: db)
         
-        try Int.defaultSQLBinder.setf(insert, 0, 80)
-        try Double.defaultSQLBinder.setf(insert, 3, 43.5)
-        try String.defaultSQLBinder.setf(insert, 1, "Alex")
-        try Data.defaultSQLBinder.setf(insert, 4, d)
-
-        try insert
-            .bind(80, at: 0)
-            .bind("Alex", at: 1)
-            .bind(66, at: 2)
-            .bind(43.5, at: 3)
-            .bind(d, at: 4)
-            .execute()
-
         // THEN
         let last = db.lastInsertRowID
         XCTAssert(last == 80)
 
-        let count = insert.bindParameterCount
-        XCTAssert(count == 5)
+        let count = db.lastChangeCount
+//        let count = insert.bindParameterCount
+        XCTAssert(count == 1)
         
         let select = try db.prepare("SELECT * FROM test")
         XCTAssertTrue(try select.step())
@@ -145,6 +123,43 @@ final class SQLUnitTests: XCTestCase {
 
         let e3 = SQLError(code: 666, db: db.ref)
         assertSnapshot(matching: e3, as: .dump)
+
+    }
+    
+    func populate(db: SQLConnection) throws {
+        /// GIVEN
+        try db.execute("""
+         CREATE TABLE test
+        (
+            Id INTEGER PRIMARY KEY NOT NULL,
+            Name VARCHAR,
+            Level INTEGER,
+            number REAL,
+            thunk BLOB
+        )
+        
+        """)
+        
+        let insert = try db.prepare("""
+        INSERT INTO test (id, level, name, number, thunk)
+        VALUES (?, ?, ?, ?, ?)
+        """)
+        
+        // WHEN
+        let d = "foo".data(using: .ascii)!
+        
+        try Int.defaultSQLBinder.setf(insert, 0, 80)
+        try Double.defaultSQLBinder.setf(insert, 3, 43.5)
+        try String.defaultSQLBinder.setf(insert, 1, "Alex")
+        try Data.defaultSQLBinder.setf(insert, 4, d)
+        
+        try insert
+            .bind(80, at: 0)
+            .bind("Alex", at: 1)
+            .bind(66, at: 2)
+            .bind(43.5, at: 3)
+            .bind(d, at: 4)
+            .execute()
 
     }
 }
