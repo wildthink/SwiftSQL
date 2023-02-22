@@ -19,17 +19,17 @@ public extension ExpressibleByDefault {
     }
 }
 
-public struct Schema {
+public struct Schema<E: ExpressibleByDefault> {
     public typealias ID = Int64
-    var name: String
-    var valueType: Any.Type
+    public private(set) var table: String
+    public private(set) var valueType: E.Type
     var md: Metadata { swift_metadata(of: valueType) }
 }
 
 public extension Schema {
-    init(_ name: String? = nil, for t: Any.Type) {
+    init(table: String? = nil, for t: E.Type) {
         self.valueType = t
-        self.name = name ?? String(describing: t)
+        self.table = table ?? String(describing: t)
     }
 }
 
@@ -58,6 +58,33 @@ public extension Schema {
 }
 
 // MARK: - SQLite Related Extensions
+public extension Schema {
+    func create(in db: SQLConnection, table: String) throws {
+        let sql = sql(create: table)
+        try db.execute(sql)
+    }
+    
+    func insert<E>(in db: SQLConnection, _ rows: [E]) throws {
+        let insert = try db.prepare(sql(insert: table))
+        for row in rows {
+            try insert.rebind(row).execute()
+        }
+    }
+    
+    func select(
+        in db: SQLConnection,
+        where cond: String? = nil,
+        limit: Int = 0,
+        fn: (E) -> Void)
+    throws {
+        let select = try db.prepare(sql(select: table, where: cond, limit: limit))
+        while try select.step() {
+            let t: E = try instantiate(from: select, strict: false)
+            fn(t)
+        }
+    }
+}
+
 public extension Schema {
     
     /*
@@ -116,7 +143,7 @@ public extension Schema {
         .joined(separator: "\n")
     }
     
-    func sql(select table: String) -> String {
+    func sql(select table: String, where cond: String? = nil, limit: Int = 0) -> String {
         [String]() {
             "SELECT"
             md.properties.map(\.name).joined(separator: ", ")
@@ -201,6 +228,12 @@ public extension SQLConnection {
 // MARK: - SQLStatement Extensions
 public extension SQLStatement {
     
+    func rebind<T>(_ nob: T) throws -> SQLStatement {
+        var copy = nob
+        try reset()
+        return try bind(&copy)
+    }
+
     @_disfavoredOverload
     func bind<T>(_ nob: T) throws -> SQLStatement {
         var copy = nob

@@ -98,7 +98,23 @@ final class SQLSchemaTests: XCTestCase {
         let v: S = try s.instantiate(from: statement)
         assertSnapshot(matching: v, as: .dump)
     }
-
+    
+    func testTopicII() throws {
+        let db = try! SQLConnection(location: .memory())
+        let sc = Schema(table: "topic", for: Topic.self)
+        try sc.create(in: db, table: "topic")
+        
+        let t1  = Topic(id: "10", name: "beta")
+        let t2  = Topic(id: "20", name: "charlie")
+        try sc.insert(in: db, [t1, t2])
+        
+        try sc.select(in: db, where: "", limit: 1) {
+            print($0)
+        }
+        
+        assertSnapshot(matching: db, as: .dbDumpTable("topic"))
+    }
+    
     func testTopic() throws {
         let db = try! SQLConnection(location: .memory())
         let s = Schema(for: Topic.self)
@@ -124,16 +140,10 @@ final class SQLSchemaTests: XCTestCase {
         }
         
         let t1  = Topic(id: "10", name: "beta")
-        try insert
-            .reset()
-            .bind(t1)
-            .execute()
+        try insert.rebind(t1).execute()
 
         let t2  = Topic(id: "20", name: "charlie")
-        try insert
-            .reset()
-            .bind(t2)
-            .execute()
+        try insert.rebind(t2).execute()
 
         try select.reset()
         var results = [Any]()
