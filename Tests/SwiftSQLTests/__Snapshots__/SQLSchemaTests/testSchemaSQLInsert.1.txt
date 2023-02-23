@@ -1,1 +1,1 @@
-INSERT INTO person ( id, name, date, dob, tags, friends ) VALUES ( ?, ?, ?, ?, ?,  ?)
+INSERT INTO person ( id, name, dob, tags, friends ) VALUES ( ?, ?, ?, ?,  ?)

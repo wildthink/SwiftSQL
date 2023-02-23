@@ -16,6 +16,8 @@ final class SQLUnitTests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
+        // Snapshot Testing reset
+//        isRecording = true
     }
 
     override func tearDownWithError() throws {
@@ -45,7 +47,7 @@ final class SQLUnitTests: XCTestCase {
         XCTAssertTrue(try select.step())
         let row = select.dictionaryValue
         assertSnapshot(matching: row, as: .dump)
-
+#if SQLBindable_FEATURE
         let b = String?.defaultSQLBinder
         print(b.valueType)
         if let strp: String = try select.value(at: 1) {
@@ -56,6 +58,7 @@ final class SQLUnitTests: XCTestCase {
         let real: Double = try select.value(at: 3)
         let int: Int = try select.value(at: 2)
         assertSnapshot(matching: (data, str, real, int), as: .dump)
+        #endif
     }
 
     func testDatabaseHooks() throws {
@@ -99,6 +102,7 @@ final class SQLUnitTests: XCTestCase {
         print ("Pass", #function)
     }
 
+#if SQLBindable_FEATURE
     func testBinders() throws {
 
         let b: [SQLBinder] = [
@@ -110,7 +114,7 @@ final class SQLUnitTests: XCTestCase {
         assertSnapshot(matching: id, as: .dump)
         assertSnapshot(matching: b, as: .dump)
     }
-
+    #endif
     func testSQLErrors() throws {
         let db = try SQLConnection(location: .memory())
         try db.execute("CREATE TABLE Test (Field VARCHAR)")
@@ -147,12 +151,12 @@ final class SQLUnitTests: XCTestCase {
         
         // WHEN
         let d = "foo".data(using: .ascii)!
-        
+#if SQLBindable_FEATURE
         try Int.defaultSQLBinder.setf(insert, 0, 80)
         try Double.defaultSQLBinder.setf(insert, 3, 43.5)
         try String.defaultSQLBinder.setf(insert, 1, "Alex")
         try Data.defaultSQLBinder.setf(insert, 4, d)
-        
+#endif
         try insert
             .bind(80, at: 0)
             .bind("Alex", at: 1)
@@ -160,6 +164,5 @@ final class SQLUnitTests: XCTestCase {
             .bind(43.5, at: 3)
             .bind(d, at: 4)
             .execute()
-
     }
 }

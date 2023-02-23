@@ -64,7 +64,7 @@ public extension Schema {
         try db.execute(sql)
     }
     
-    func insert<E>(in db: SQLConnection, _ rows: [E]) throws {
+    func insert(in db: SQLConnection, _ rows: [E]) throws {
         let insert = try db.prepare(sql(insert: table))
         for row in rows {
             try insert.rebind(row).execute()
@@ -239,7 +239,7 @@ public extension SQLStatement {
         var copy = nob
         return try bind(&copy)
     }
-    
+#if SQLBindable_FEATURE
     func bind<T>(_ nob: inout T) throws -> SQLStatement {
         var params = [(any SQLBindable)?]()
         let md = swift_metadata(of: nob)
@@ -254,7 +254,22 @@ public extension SQLStatement {
         try self.bind(params)
         return self
     }
-    
+#else
+    func bind<T>(_ nob: inout T) throws -> SQLStatement {
+        var params = [Storable?]()
+        let md = swift_metadata(of: nob)
+        for p in md.properties {
+            let v = swift_value(of: &nob, key: p.name)
+            if let v = v as? Storable {
+                params.append(v)
+            } else {
+                params.append(nil)
+            }
+        }
+        try self.bind(params)
+        return self
+    }
+#endif
     func instantiate<T: ExpressibleByDefault>(
         _ type: T.Type = T.self,
         strict: Bool = false

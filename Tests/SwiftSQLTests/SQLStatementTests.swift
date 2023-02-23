@@ -73,7 +73,7 @@ final class SQLStatementTests: XCTestCase {
         // WHEN
         try statement
             .bind(80, at: 0)
-            .bind(nil as String?, at: 1)
+            .bind(nil, at: 1)
             .execute()
 
         // THEN

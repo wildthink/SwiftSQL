@@ -23,10 +23,12 @@ final class QueryTests: XCTestCase {
 
     func testQuery() throws {
         let db = try SQLConnection(location: .memory())
-        @Query(db: db) var qry: Topic = .defaultValue()
+        @Query(db: db) var o_topic: Topic?
+        @Query(db: db) var topic: Topic
+        @Query(db: db) var topics: [Topic] = []
 
-        $qry.search = "foo"
-        $qry.wrappedValue.set("foo", to: "")
+        $topic.search = "foo"
+//        $topic.wrappedValue.set("foo", to: "")
         
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct results.
@@ -72,7 +74,7 @@ class Box<A>: ObservableObject {
 @propertyWrapper
 struct Query<Value>: DynamicProperty {
     typealias Value = Value
-//    @Environment(\.dataStore) var dataStore: SQLConnection
+    @Environment(\.dataStore) var dataStore: SQLConnection
     @State var db: SQLConnection?
    // A state object that we notify of updates
     @StateObject private var watcher: Watcher
@@ -80,6 +82,16 @@ struct Query<Value>: DynamicProperty {
     init(wrappedValue: Value, db: SQLConnection) {
         self.db = db
         self._watcher = .init(wrappedValue: Watcher(db: db))
+    }
+    
+    init(db: SQLConnection) {
+        self.db = db
+        self._watcher = .init(wrappedValue: Watcher(db: db))
+    }
+
+    func update() {
+//        guard db != dataStore else { return }
+//        self.watcher = Watcher(db: db)
     }
     
     var wrappedValue: Value {
@@ -134,13 +146,27 @@ struct Query<Value>: DynamicProperty {
 }
 
 public struct SQLPredicate: Equatable {
-    var search: String
+    public static func == (lhs: SQLPredicate, rhs: SQLPredicate) -> Bool {
+        lhs.search == rhs.search
+    }
     
-    mutating func callAsFunction(_ key: String) {
+    var _search: String
+    var search: String {
+        get { _search }
+        set { _search = newValue }
+    }
+    
+    init(search: String) {
+        self._search = search
+    }
+    
+    func callAsFunction(_ key: String) {
         
     }
     
-    mutating func set(_ key: String, to value: String) {
+    var fn: (_ key: String, _ value: String) -> Void = { (k, v) in }
+    
+    func set(_ key: String, to value: String) {
         
     }
     

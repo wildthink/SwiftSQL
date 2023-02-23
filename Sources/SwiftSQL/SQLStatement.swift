@@ -89,90 +89,7 @@ public final class SQLStatement {
         try isOK(sqlite3_step(ref))
         return self
     }
-
-    // MARK: Binding Parameters
-
-    /// Binds values to the statement parameters.
-    ///
-    ///     try db.prepare("INSERT INTO Users (Level, Name) VALUES (?, ?)")
-    ///        .bind(80, "John")
-    ///        .execute()
-    ///
-    @discardableResult
-    public func bind(_ parameters: (any SQLBindable)?...) throws -> Self {
-        try bind(parameters)
-        return self
-    }
-
-    /// Binds values to the statement parameters.
-    ///
-    ///     try db.prepare("INSERT INTO Users (Level, Name) VALUES (?, ?)")
-    ///        .bind([80, "John"])
-    ///        .execute()
-    ///
-    @discardableResult
-    public func bind(_ parameters: [(any SQLBindable)?]) throws -> Self {
-        for (index, value) in zip(parameters.indices, parameters) {
-            try bind(value: value, at: Int(index + 1))
-        }
-        return self
-    }
-
-    /// Binds values to the named statement parameters.
-    ///
-    ///     let row = try db.prepare("SELECT Level, Name FROM Users WHERE Name = :param LIMIT 1")
-    ///         .bind([":param": "John""])
-    ///         .next()
-    ///
-    /// - parameter name: The name of the parameter. If the name is missing, throws
-    /// an error.
-    @discardableResult
-    public func bind(_ parameters: [String: (any SQLBindable)?]) throws -> Self {
-        for (key, value) in parameters {
-            try _bind(value, for: key)
-        }
-        return self
-    }
-
-    /// Binds values to the parameter with the given name.
-    ///
-    ///     let row = try db.prepare("SELECT Level, Name FROM Users WHERE Name = :param LIMIT 1")
-    ///         .bind("John", for: ":param")
-    ///         .next()
-    ///
-    /// - parameter name: The name of the parameter. If the name is missing, throws
-    /// an error.
-    @discardableResult
-    public func bind<B: SQLiteBindable>(_ value: B?, for name: String) throws -> Self {
-        try _bind(value, for: name)
-        return self
-    }
-
-    /// Binds value to the given index.
-    ///
-    /// - parameter index: The index starts at 0.
-    @discardableResult
-    public func bind<B: SQLBindable>(_ value: B?, at index: Int) throws -> Self {
-        try bind(value: value, at: (index + 1))
-        return self
-    }
-
-    private func _bind(_ value: (any SQLBindable)?, for name: String) throws {
-        let index = sqlite3_bind_parameter_index(ref, name)
-        guard index > 0 else {
-            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
-        }
-        try bind(value: value, at: Int(index))
-    }
-
-//    private func _bind<B: SQLBindable>(_ value: B?, for name: String) throws {
-//        let index = sqlite3_bind_parameter_index(ref, name)
-//        guard index > 0 else {
-//            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
-//        }
-//        try _bind(value, at: Int(index))
-//    }
-
+    
     // Future release will include the use of alternate SQLBinders
 //    private func _bind(_ value: (any SQLBindable)?, at index: Int) throws {
     public func bind(value: Any?, at index: Int) throws {
@@ -245,6 +162,7 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
+#if SQLBindable_FEATURE
     public func value<T: SQLiteBindable>(
         at index: Int,
         as t: T.Type = T.self)
@@ -258,7 +176,7 @@ public final class SQLStatement {
     throws -> T? {
         try T.defaultSQLBinder.getf(self, index) as? T
     }
-
+#endif
     /// Returns a single column of the current result row of a query. If the
     /// value is `Null`, returns `nil.`
     ///
@@ -374,9 +292,11 @@ public final class SQLStatement {
     }
     
     public func value(at ndx: Int, as vtype: Any.Type) throws -> Any {
+#if SQLBindable_FEATURE
         if let bv = vtype as? any SQLBindable.Type {
             return try bv.defaultSQLBinder.getf(self, ndx)
         }
+#endif
         let value = anyValue(at: ndx) as Any
         if type(of: value) == vtype {
             return value
