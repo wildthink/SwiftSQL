@@ -321,28 +321,6 @@ extension Metadata.Property {
     var isOptional: Bool { metadata.isOptional }
 }
 
-protocol OptionalProtocol {
-    static var honestType: Any.Type { get }
-}
-
-extension Optional: OptionalProtocol {
-    static var honestType: Any.Type { Wrapped.self }
-}
-
-protocol ArrayProtocol {
-    static var elementType: Any.Type { get }
-    static func empty() -> Self
-}
-
-extension Array: ArrayProtocol {
-    static var elementType: Any.Type {
-        Element.self
-    }
-    static func empty() -> Array<Element> {
-        Self()
-    }
-}
-
 public func tab(_ cnt: Int = 1) -> String {
     cnt == 1 ? "\t" : String(repeating: "\t", count: cnt)
 }

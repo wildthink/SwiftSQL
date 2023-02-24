@@ -6,11 +6,10 @@
 //
 
 import XCTest
-import SwiftSQL
-import SwiftSQLExt
+@testable import SwiftSQL
+@testable import SwiftSQLExt
 import KeyValueCoding
 import SnapshotTesting
-
 
 protocol Entity {}
 
@@ -97,6 +96,17 @@ final class SQLSchemaTests: XCTestCase {
         let s = Schema(for: S.self)
         let v: S = try s.instantiate(from: statement)
         assertSnapshot(matching: v, as: .dump)
+    }
+    
+    func testAPI() throws {
+        let a = [23]
+        let t = type(of: a as ArrayProtocol)
+        var s: Int? = 23
+        let sr = s.storableRepresentation
+        s = nil
+        let sn = s.storableRepresentation
+        assertSnapshot(matching: (s, sr, sn), as: .dump)
+        assertSnapshot(matching: (t.elementType, t.empty()), as: .dump)
     }
     
     // FIXME: Add JSON Column support

@@ -7,26 +7,26 @@
 
 import Foundation
 
-protocol OptionalProtocol {
+public protocol OptionalProtocol {
     static var honestType: Any.Type { get }
     var honestValue: Any? { get }
 }
 
 extension Optional: OptionalProtocol {    
-    static var honestType: Any.Type { Wrapped.self }
-    var honestValue: Any? { return self }
+    public static var honestType: Any.Type { Wrapped.self }
+    public var honestValue: Any? { return self }
 }
 
-protocol ArrayProtocol {
+public protocol ArrayProtocol {
     static var elementType: Any.Type { get }
     static func empty() -> Self
 }
 
 extension Array: ArrayProtocol {
-    static var elementType: Any.Type {
+    public static var elementType: Any.Type {
         Element.self
     }
-    static func empty() -> Array<Element> {
+    public static func empty() -> Array<Element> {
         Self()
     }
 }
@@ -55,13 +55,7 @@ extension BuiltinStorable {
     
     public var builtinRepresentation: Any { self }
     public var storableRepresentation: StorableRepresentation {
-        fatalError()
-    }
-}
-
-extension Never: StorableRepresentation {
-    public var storableRepresentation: StorableRepresentation {
-        fatalError()
+        self
     }
 }
 
