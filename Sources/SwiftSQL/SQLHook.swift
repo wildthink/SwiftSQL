@@ -6,6 +6,10 @@ import SQLite3
 
 public extension SQLConnection {
     
+    func publisher() -> AnyPublisher<Hook.Event, Never> {
+        _hook.publisher()
+    }
+    
     struct UpdateInfo: CustomStringConvertible {
         public let database: String
         public let tableName: String
@@ -101,7 +105,7 @@ import SwiftUI
 import Combine
 
 public class Hook {
-    enum Event { case didRollback, didCommit, didUpdate(SQLConnection.UpdateInfo) }
+    public enum Event { case didRollback, didCommit, didUpdate(SQLConnection.UpdateInfo) }
 
     var update: UpdateHookCallback?
     var commit: (() -> Void)?

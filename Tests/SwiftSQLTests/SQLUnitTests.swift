@@ -55,6 +55,27 @@ final class SQLUnitTests: XCTestCase {
         assertSnapshot(matching: (data, str, real, int), as: .dump)
     }
 
+    func testDatabasePublisher() throws {
+        let db = try SQLConnection(location: .memory())
+        var log: [String] = []
+        let can = db.publisher().sink {
+            print($0)
+            log.append("\($0)")
+        }
+        
+        try db.execute("CREATE TABLE Test (Field VARCHAR)")
+        try db.execute("INSERT INTO Test VALUES ('Howdy')")
+        //        try db.execute("COMMIT")
+        try db.execute("""
+            BEGIN;
+            INSERT INTO Test VALUES ('Howdy');
+            ROLLBACK;
+        """)
+        XCTAssertNotNil(can)
+        assertSnapshot(matching: log, as: .dump)
+        print ("Pass", #function)
+    }
+    
     func testDatabaseHooks() throws {
         let db = try SQLConnection(location: .memory())
         var didCommit = false
@@ -96,19 +117,6 @@ final class SQLUnitTests: XCTestCase {
         print ("Pass", #function)
     }
 
-#if SQLBindable_FEATURE
-    func testBinders() throws {
-
-        let b: [SQLBinder] = [
-            Int.defaultSQLBinder,
-            Int32.defaultSQLBinder,
-            Float.defaultSQLBinder]
-
-        let id: SQLBinder = .id
-        assertSnapshot(matching: id, as: .dump)
-        assertSnapshot(matching: b, as: .dump)
-    }
-    #endif
     func testSQLErrors() throws {
         let db = try SQLConnection(location: .memory())
         try db.execute("CREATE TABLE Test (Field VARCHAR)")
