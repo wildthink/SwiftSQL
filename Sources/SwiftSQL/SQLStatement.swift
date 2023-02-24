@@ -99,7 +99,9 @@ public final class SQLStatement {
         if value == nil {
             sqlite3_bind_null(ref, index)
         }
-        else if let value = value as? Data {
+        else if let value = value as? Bool {
+            sqlite3_bind_int64(ref, index, value ? 1 : 0)
+        } else if let value = value as? Data {
             sqlite3_bind_blob(ref, index, Array(value), Int32(value.count), SQLITE_TRANSIENT)
         }
         else if let value = value as? (any FixedWidthInteger) {
@@ -117,7 +119,8 @@ public final class SQLStatement {
                               -1, SQLITE_TRANSIENT)
         }
         else {
-            throw SQLError(code: #line, message: "Cannot bind value of type \(type(of: value))")
+            throw SQLError(code: #line,
+                           message: "Cannot bind \(String(describing: value)) of type \(type(of: value))")
         }
     }
 
@@ -298,10 +301,19 @@ public final class SQLStatement {
         }
 #endif
         let value = anyValue(at: ndx) as Any
+        if let opt = value as? OptionalProtocol,
+           let honestValue = opt.honestValue {
+            if type(of: honestValue) == vtype {
+                return value
+            } else {
+                return opt
+            }
+        }
         if type(of: value) == vtype {
             return value
         }
-        throw SQLError(code: #line, message: "Error reading column at '\(ndx)'")
+        throw SQLError(code: #line,
+                       message: "Error reading \(value) column at '\(ndx)'")
     }
     
 //    public func anyValue(named: String) throws -> Any? {

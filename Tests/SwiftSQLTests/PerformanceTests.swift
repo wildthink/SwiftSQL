@@ -37,7 +37,7 @@ final class PerformanceTests: XCTestCase {
         INSERT INTO Users (Name, Surname, Level)
         VALUES (?, ?, ?)
         """)
-#if SQLBindable_FEATURE
+//#if SQLBindable_FEATURE
         measure {
             for _ in 0..<500 {
                 try! statement
@@ -49,7 +49,7 @@ final class PerformanceTests: XCTestCase {
                 try! statement.reset()
             }
         }
-#endif
+//#endif
     }
 
     func xtestWriteBindArray() throws {

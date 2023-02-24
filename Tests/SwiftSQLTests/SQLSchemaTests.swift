@@ -105,8 +105,9 @@ final class SQLSchemaTests: XCTestCase {
         let sc = Schema(table: "people", for: Person.self)
         try sc.create(in: db, table: "people")
         
-        let p1  = Person(id: 10, name: "George", dob: .now, tags: ["one"], friends: [])
-        let p2  = Person(id: 20, name: "Jane", dob: .now, tags: ["two"], friends: [])
+        let date = Date(timeIntervalSince1970: 0)
+        let p1  = Person(id: 10, name: "George", dob: date, tags: ["one"], friends: [])
+        let p2  = Person(id: 20, name: "Jane", dob: date, tags: ["two"], friends: [])
         try sc.insert(in: db, [p1, p2])
         
         try sc.select(in: db, where: "", limit: 1) {

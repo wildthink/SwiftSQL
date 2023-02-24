@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  Schema.swift
 //  
 //
 //  Created by Jason Jobe on 2/2/23.
@@ -46,6 +46,9 @@ public extension Schema {
         
         for p in md.properties {
             var v: Any?
+            if let s = v as? Storable {
+                v = s.storableRepresentation
+            }
             if strict {
                 v = try stm.value(named: p.name, as: p.metadata.type)
             } else {
@@ -168,6 +171,8 @@ extension Schema {
     
     func type_decl(for md: Metadata) -> String {
         switch md.type {
+            case is Bool.Type:
+                return "BOOL"
             case is Date.Type:
                 return "DATE"
             case is Data.Type:
@@ -193,7 +198,7 @@ extension Schema {
         type_decl(for: p.metadata)
     }
     
-    func sql_decl(for p: Metadata.Property, strict: Bool = true) -> String {
+    func sql_decl(for p: Metadata.Property, strict: Bool = false) -> String {
         if strict {
             return "\(p.name) \(type_decl(for: p))\(p.isOptional ? "" : " NOT NULL")"
         } else {
@@ -233,12 +238,14 @@ public extension SQLStatement {
         try reset()
         return try bind(&copy)
     }
+    
+//    @_disfavoredOverload
+//    func bind<T>(_ nob: T) throws -> SQLStatement {
+//        var copy = nob
+//        return try bind(nob)
+//        return self
+//    }
 
-    @_disfavoredOverload
-    func bind<T>(_ nob: T) throws -> SQLStatement {
-        var copy = nob
-        return try bind(&copy)
-    }
 #if SQLBindable_FEATURE
     func bind<T>(_ nob: inout T) throws -> SQLStatement {
         var params = [(any SQLBindable)?]()
@@ -260,8 +267,10 @@ public extension SQLStatement {
         let md = swift_metadata(of: nob)
         for p in md.properties {
             let v = swift_value(of: &nob, key: p.name)
-            if let v = v as? Storable {
-                params.append(v)
+            if let v = v as? BuiltinStorable {
+                params.append((v.builtinRepresentation as! Storable))
+            } else if let v = v as? Storable {
+                params.append(v.storableRepresentation)
             } else {
                 params.append(nil)
             }
@@ -289,12 +298,12 @@ public extension SQLStatement {
         }
         return it
     }
-
+    
     func instantiate<T: ExpressibleByDefault>(
         _ type: T.Type = T.self,
         strict: Bool = false
     ) throws -> T {
-
+        
         var it: T = .defaultValue()
         let md = swift_metadata(of: T.self)
         

@@ -53,12 +53,12 @@ final class SQLUnitTests: XCTestCase {
         if let strp: String = try select.value(at: 1) {
             print (strp)
         }
-        let data: Data = try select.value(at: 4)
+#endif
         let str: String = try select.value(at: 1)
+        let int: Int = try select.value(at: 0)
         let real: Double = try select.value(at: 3)
-        let int: Int = try select.value(at: 2)
+        let data: Data = try select.value(at: 4)
         assertSnapshot(matching: (data, str, real, int), as: .dump)
-        #endif
     }
 
     func testDatabaseHooks() throws {

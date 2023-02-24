@@ -7,35 +7,80 @@
 
 import Foundation
 
-public protocol StorableRepresentation {}
+protocol OptionalProtocol {
+    static var honestType: Any.Type { get }
+    var honestValue: Any? { get }
+}
+
+extension Optional: OptionalProtocol {    
+    static var honestType: Any.Type { Wrapped.self }
+    var honestValue: Any? { return self }
+}
+
+protocol ArrayProtocol {
+    static var elementType: Any.Type { get }
+    static func empty() -> Self
+}
+
+extension Array: ArrayProtocol {
+    static var elementType: Any.Type {
+        Element.self
+    }
+    static func empty() -> Array<Element> {
+        Self()
+    }
+}
+
+// MARK: Storable
+//public protocol StorableRepresentation {}
+public typealias StorableRepresentation = Storable
 
 public protocol Storable {
     var storableRepresentation: StorableRepresentation { get }
 }
 
+extension Optional: Storable where Wrapped: Storable {
+    public var storableRepresentation: StorableRepresentation {
+        switch self {
+            case .none: return self
+            case .some(let s): return s.storableRepresentation
+        }
+    }
+}
 
-protocol BuiltinStorable: Storable {
+public protocol BuiltinStorable: Storable {
     var builtinRepresentation: Any { get }
 }
 
 extension BuiltinStorable {
     
-    var builtinRepresentation: Any { self }
+    public var builtinRepresentation: Any { self }
     public var storableRepresentation: StorableRepresentation {
         fatalError()
     }
 }
 
 extension Never: StorableRepresentation {
+    public var storableRepresentation: StorableRepresentation {
+        fatalError()
+    }
 }
 
 // TODO: Add Date and JSON as Storables
+extension Date: Storable {
+    
+    public var storableRepresentation: StorableRepresentation {
+        let bitPattern = self.timeIntervalSinceReferenceDate.bitPattern
+        return String(bitPattern) // .builtinRepresentation as! StorableRepresentation
+    }
+}
 
 // TODO: Move to SQLStatement
 import SQLite3
 
-extension Data: BuiltinStorable {}
+extension Data:   BuiltinStorable {}
 extension String: BuiltinStorable {}
+extension Bool:   BuiltinStorable {}
 
 // FixedWidthInteger
 extension Int:   BuiltinStorable {}
@@ -51,6 +96,35 @@ extension Float32: BuiltinStorable {}
 extension Float64: BuiltinStorable {}
 
 extension SQLStatement {
+
+    @_disfavoredOverload
+    public func value<T: Storable>(
+        at index: Int,
+        as t: T.Type = T.self)
+    throws -> T? {
+        self.anyValue(at: index) as? T
+    }
+
+    public func value<T: Storable>(at ndx: Int, as t: T.Type = T.self)
+    throws -> T
+    where T: FixedWidthInteger
+    {
+        let v = self.anyValue(at: ndx)
+        if let v, let r = v as? T { return r }
+        if let v = v as? (any FixedWidthInteger) {
+            return T(v)
+        }
+        throw SQLError(code: #line,
+                message: "Unable to cast \(String(describing: v)) at \(ndx) to \(t)")
+    }
+
+    public func value<T: Storable>(at ndx: Int, as t: T.Type = T.self)
+    throws -> T {
+        let v = self.anyValue(at: ndx)
+        if let v, let r = v as? T { return r }
+        throw SQLError(code: #line,
+                       message: "Unable to cast \(String(describing: v)) at \(ndx) to \(t)")
+    }
     
     @discardableResult
     public func bind(_ parameters: Storable?...) throws -> Self {
