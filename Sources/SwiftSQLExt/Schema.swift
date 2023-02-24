@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  Schema.swift
 //  
 //
 //  Created by Jason Jobe on 2/2/23.
@@ -46,6 +46,9 @@ public extension Schema {
         
         for p in md.properties {
             var v: Any?
+            if let s = v as? Storable {
+                v = s.storableRepresentation
+            }
             if strict {
                 v = try stm.value(named: p.name, as: p.metadata.type)
             } else {
@@ -64,7 +67,7 @@ public extension Schema {
         try db.execute(sql)
     }
     
-    func insert<E>(in db: SQLConnection, _ rows: [E]) throws {
+    func insert(in db: SQLConnection, _ rows: [E]) throws {
         let insert = try db.prepare(sql(insert: table))
         for row in rows {
             try insert.rebind(row).execute()
@@ -168,6 +171,8 @@ extension Schema {
     
     func type_decl(for md: Metadata) -> String {
         switch md.type {
+            case is Bool.Type:
+                return "BOOL"
             case is Date.Type:
                 return "DATE"
             case is Data.Type:
@@ -193,7 +198,7 @@ extension Schema {
         type_decl(for: p.metadata)
     }
     
-    func sql_decl(for p: Metadata.Property, strict: Bool = true) -> String {
+    func sql_decl(for p: Metadata.Property, strict: Bool = false) -> String {
         if strict {
             return "\(p.name) \(type_decl(for: p))\(p.isOptional ? "" : " NOT NULL")"
         } else {
@@ -233,20 +238,17 @@ public extension SQLStatement {
         try reset()
         return try bind(&copy)
     }
-
-    @_disfavoredOverload
-    func bind<T>(_ nob: T) throws -> SQLStatement {
-        var copy = nob
-        return try bind(&copy)
-    }
     
+
     func bind<T>(_ nob: inout T) throws -> SQLStatement {
-        var params = [(any SQLBindable)?]()
+        var params = [Storable?]()
         let md = swift_metadata(of: nob)
         for p in md.properties {
             let v = swift_value(of: &nob, key: p.name)
-            if let v = v as? (any SQLBindable) {
-                params.append(v)
+            if let v = v as? BuiltinStorable {
+                params.append((v.builtinRepresentation as! Storable))
+            } else if let v = v as? Storable {
+                params.append(v.storableRepresentation)
             } else {
                 params.append(nil)
             }
@@ -254,7 +256,7 @@ public extension SQLStatement {
         try self.bind(params)
         return self
     }
-    
+
     func instantiate<T: ExpressibleByDefault>(
         _ type: T.Type = T.self,
         strict: Bool = false
@@ -274,12 +276,12 @@ public extension SQLStatement {
         }
         return it
     }
-
+    
     func instantiate<T: ExpressibleByDefault>(
         _ type: T.Type = T.self,
         strict: Bool = false
     ) throws -> T {
-
+        
         var it: T = .defaultValue()
         let md = swift_metadata(of: T.self)
         
@@ -306,10 +308,6 @@ extension Metadata.Property: Hashable {
     }
 }
 
-//func Line(@ArrayBuilder<String> f: () -> [String]) -> String {
-//    f().joined(separator: "")
-//}
-
 public func Joined(with sep: String = "", @ArrayBuilder<String> f: () -> [String]) -> String {
     f().joined(separator: sep)
 }
@@ -321,28 +319,6 @@ public extension Metadata {
 
 extension Metadata.Property {
     var isOptional: Bool { metadata.isOptional }
-}
-
-protocol OptionalProtocol {
-    static var honestType: Any.Type { get }
-}
-
-extension Optional: OptionalProtocol {
-    static var honestType: Any.Type { Wrapped.self }
-}
-
-protocol ArrayProtocol {
-    static var elementType: Any.Type { get }
-    static func empty() -> Self
-}
-
-extension Array: ArrayProtocol {
-    static var elementType: Any.Type {
-        Element.self
-    }
-    static func empty() -> Array<Element> {
-        Self()
-    }
 }
 
 public func tab(_ cnt: Int = 1) -> String {

@@ -6,11 +6,10 @@
 //
 
 import XCTest
-import SwiftSQL
-import SwiftSQLExt
+@testable import SwiftSQL
+@testable import SwiftSQLExt
 import KeyValueCoding
 import SnapshotTesting
-
 
 protocol Entity {}
 
@@ -99,20 +98,33 @@ final class SQLSchemaTests: XCTestCase {
         assertSnapshot(matching: v, as: .dump)
     }
     
+    func testAPI() throws {
+        let a = [23]
+        let t = type(of: a as ArrayProtocol)
+        var s: Int? = 23
+        let sr = s.storableRepresentation
+        s = nil
+        let sn = s.storableRepresentation
+        assertSnapshot(matching: (s, sr, sn), as: .dump)
+        assertSnapshot(matching: (t.elementType, t.empty()), as: .dump)
+    }
+    
+    // FIXME: Add JSON Column support
     func testTopicII() throws {
         let db = try! SQLConnection(location: .memory())
-        let sc = Schema(table: "topic", for: Topic.self)
-        try sc.create(in: db, table: "topic")
+        let sc = Schema(table: "people", for: Person.self)
+        try sc.create(in: db, table: "people")
         
-        let t1  = Topic(id: "10", name: "beta")
-        let t2  = Topic(id: "20", name: "charlie")
-        try sc.insert(in: db, [t1, t2])
+        let date = Date(timeIntervalSince1970: 0)
+        let p1  = Person(id: 10, name: "George", dob: date, tags: ["one"], friends: [])
+        let p2  = Person(id: 20, name: "Jane", dob: date, tags: ["two"], friends: [])
+        try sc.insert(in: db, [p1, p2])
         
         try sc.select(in: db, where: "", limit: 1) {
             print($0)
         }
         
-        assertSnapshot(matching: db, as: .dbDumpTable("topic"))
+        assertSnapshot(matching: db, as: .dbDumpTable("people"))
     }
     
     func testTopic() throws {
@@ -212,15 +224,6 @@ final class SQLSchemaTests: XCTestCase {
         let s = Schema(for: Person.self)
         assertSnapshot(matching: s.sql(insert: "person"), as: .lines)
     }
-
-//    func testMeta() throws {
-//        let t = Table(defaultContext: ())
-//        let md: _MetadataKind?
-//        
-//        _forEachField(of: t) {
-//            print($0)
-//        }
-//    }
 }
 
 struct Table: ExpressibleByDefault {
@@ -298,7 +301,6 @@ extension Topic: ExpressibleByDefault {
 struct Person {
     var id: Int64
     var name: String
-    var date: Date
     var dob: Date?
     var tags: [String]
     var friends: [Person]
@@ -306,6 +308,6 @@ struct Person {
 
 extension Person: ExpressibleByDefault {
     init(defaultContext: ()) {
-        self = .init(id: 0, name: "", date: .distantPast, tags: [], friends: [])
+        self = .init(id: 0, name: "", tags: [], friends: [])
     }
 }
