@@ -32,7 +32,6 @@ extension Array: ArrayProtocol {
 }
 
 // MARK: Storable
-//public protocol StorableRepresentation {}
 public typealias StorableRepresentation = Storable
 
 public protocol Storable {
@@ -166,13 +165,13 @@ extension SQLStatement {
 
     // MARK: - Bind
     @_disfavoredOverload
-    public func bind(_ value: Any?, at index: Int) throws {
+    public func bind(_ value: Any?, at index: Int) throws -> Self {
         guard let value else {
             sqlite3_bind_null(ref, Int32(index))
-            return
+            return self
         }
         if let builtin = value as? Storable {
-            return try bind(value: builtin, at: index)
+            return try bind(builtin, at: index)
         }
         // else
         throw SQLError(code: #line, message: "Unsupport type \(type(of: value))")

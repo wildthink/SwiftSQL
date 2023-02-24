@@ -47,13 +47,7 @@ final class SQLUnitTests: XCTestCase {
         XCTAssertTrue(try select.step())
         let row = select.dictionaryValue
         assertSnapshot(matching: row, as: .dump)
-#if SQLBindable_FEATURE
-        let b = String?.defaultSQLBinder
-        print(b.valueType)
-        if let strp: String = try select.value(at: 1) {
-            print (strp)
-        }
-#endif
+
         let str: String = try select.value(at: 1)
         let int: Int = try select.value(at: 0)
         let real: Double = try select.value(at: 3)
@@ -151,12 +145,7 @@ final class SQLUnitTests: XCTestCase {
         
         // WHEN
         let d = "foo".data(using: .ascii)!
-#if SQLBindable_FEATURE
-        try Int.defaultSQLBinder.setf(insert, 0, 80)
-        try Double.defaultSQLBinder.setf(insert, 3, 43.5)
-        try String.defaultSQLBinder.setf(insert, 1, "Alex")
-        try Data.defaultSQLBinder.setf(insert, 4, d)
-#endif
+
         try insert
             .bind(80, at: 0)
             .bind("Alex", at: 1)

@@ -128,16 +128,6 @@ public class Hook {
     }
 }
 
-//open class Hook {
-//
-//    public init() {
-//
-//    }
-//
-//    func registerHandlers(_ db: SQLConnection) {
-//    }
-//}
-
 public extension Hook {
     static var `default`: Hook = Hook()
 }

@@ -124,14 +124,6 @@ public final class SQLStatement {
         }
     }
 
-//    private func _bind<B: SQLBindable>(_ value: B?, at index: Int) throws {
-//        if let value = value {
-//            B.defaultSQLBinder.setf(self, Int32(index), value)
-//        } else {
-//            sqlite3_bind_null(ref, Int32(index))
-//        }
-//    }
-
     /// Clears bindings.
     ///
     /// It is not commonly useful to evaluate the exact same SQL statement more
@@ -165,43 +157,11 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-#if SQLBindable_FEATURE
-    public func value<T: SQLiteBindable>(
-        at index: Int,
-        as t: T.Type = T.self)
-    throws -> T {
-        try T.defaultSQLBinder.getf(self, index) as! T
-    }
-
-    public func value<T: SQLiteBindable>(
-        at index: Int,
-        as t: T.Type = T.self)
-    throws -> T? {
-        try T.defaultSQLBinder.getf(self, index) as? T
-    }
-#endif
-    /// Returns a single column of the current result row of a query. If the
-    /// value is `Null`, returns `nil.`
-    ///
-    /// If the SQL statement does not currently point to a valid row, or if the
-    /// column index is out of range, the result is undefined.
-    ///
-    /// - parameter index: The leftmost column of the result set has the index 0.
-//    public func column<T: SQLBindable>(at index: Int) -> T? {
-//        if sqlite3_column_type(ref, Int32(index)) == SQLITE_NULL {
-//            return nil
-//        } else {
-//            return T.defaultSQLBinder.getf(self, Int32(index)) as? T
-//        }
-//    }
 
     // MARK: - Builtin Column Value Types
     // SQLITE_TEXT
     public func column(at ndx: Int) -> String {
         column(at: ndx) ?? ""
-//        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_TEXT
-//        ? String(cString: sqlite3_column_text(ref, Int32(ndx)))
-//        : ""
     }
 
     public func column(at ndx: Int) -> String? {
@@ -216,9 +176,6 @@ public final class SQLStatement {
         as vtype: V.Type = V.self)
     -> V {
         column(at: ndx) ?? .zero
-//        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_INTEGER
-//        ? V(sqlite3_column_int64(ref, Int32(ndx)))
-//        : .zero
     }
 
     public func column<V: FixedWidthInteger>(
@@ -236,9 +193,6 @@ public final class SQLStatement {
         as v: V.Type = V.self)
     -> V {
         column(at: ndx) ?? .zero
-//        sqlite3_column_type(ref, Int32(ndx)) == SQLITE_FLOAT
-//        ? V(sqlite3_column_double(ref, Int32(ndx)))
-//        : .zero
     }
 
     public func column<V: BinaryFloatingPoint>(
@@ -295,11 +249,6 @@ public final class SQLStatement {
     }
     
     public func value(at ndx: Int, as vtype: Any.Type) throws -> Any {
-#if SQLBindable_FEATURE
-        if let bv = vtype as? any SQLBindable.Type {
-            return try bv.defaultSQLBinder.getf(self, ndx)
-        }
-#endif
         let value = anyValue(at: ndx) as Any
         if let opt = value as? OptionalProtocol,
            let honestValue = opt.honestValue {
@@ -315,18 +264,7 @@ public final class SQLStatement {
         throw SQLError(code: #line,
                        message: "Error reading \(value) column at '\(ndx)'")
     }
-    
-//    public func anyValue(named: String) throws -> Any? {
-//        guard let ndx = columnIndex(forName: named)
-//        else { throw SQLError(code: #line, message: "No column named '\(named)'") }
-//        return self.anyValue(at: ndx)
-//    }
 
-//    @_disfavoredOverload
-//    public func anyValue(at index: Int) -> Any? {
-//
-//    }
-    
     public func anyValue(at index: Int) -> Any? {
 
         let index = Int32(index)

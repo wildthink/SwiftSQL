@@ -49,8 +49,9 @@ final class SQLStatementTests: XCTestCase {
         """)
 
         // WHEN
+        let v: Any? = 80
         try insert
-            .bind(80, at: 0)
+            .bind(v, at: 0)
             .bind("Alex", at: 1)
             .execute()
 

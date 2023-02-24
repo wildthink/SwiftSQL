@@ -239,29 +239,7 @@ public extension SQLStatement {
         return try bind(&copy)
     }
     
-//    @_disfavoredOverload
-//    func bind<T>(_ nob: T) throws -> SQLStatement {
-//        var copy = nob
-//        return try bind(nob)
-//        return self
-//    }
 
-#if SQLBindable_FEATURE
-    func bind<T>(_ nob: inout T) throws -> SQLStatement {
-        var params = [(any SQLBindable)?]()
-        let md = swift_metadata(of: nob)
-        for p in md.properties {
-            let v = swift_value(of: &nob, key: p.name)
-            if let v = v as? (any SQLBindable) {
-                params.append(v)
-            } else {
-                params.append(nil)
-            }
-        }
-        try self.bind(params)
-        return self
-    }
-#else
     func bind<T>(_ nob: inout T) throws -> SQLStatement {
         var params = [Storable?]()
         let md = swift_metadata(of: nob)
@@ -278,7 +256,7 @@ public extension SQLStatement {
         try self.bind(params)
         return self
     }
-#endif
+
     func instantiate<T: ExpressibleByDefault>(
         _ type: T.Type = T.self,
         strict: Bool = false
@@ -329,10 +307,6 @@ extension Metadata.Property: Hashable {
         hasher.combine(name)
     }
 }
-
-//func Line(@ArrayBuilder<String> f: () -> [String]) -> String {
-//    f().joined(separator: "")
-//}
 
 public func Joined(with sep: String = "", @ArrayBuilder<String> f: () -> [String]) -> String {
     f().joined(separator: sep)
