@@ -1,0 +1,4 @@
+▿ (3 elements)
+  - .0: Optional<Int>.none
+  - .1: 23
+  - .2: Optional<Int>.none
