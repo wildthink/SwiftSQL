@@ -217,12 +217,10 @@ extension SQLStatement {
             sqlite3_bind_double(ref, index, Double(value))
         }
         else if let value = value as? String {
-            sqlite3_bind_text(ref, index, value,
-                              -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(ref, index, value, -1, SQLITE_TRANSIENT)
         }
         else if let value = value as? (any StringProtocol) {
-            sqlite3_bind_text(ref, index, String(value),
-                              -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(ref, index, String(value), -1, SQLITE_TRANSIENT)
         }
         else {
             throw SQLError(code: #line, message: "Cannot bind value of type \(type(of: value))")

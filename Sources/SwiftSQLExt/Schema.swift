@@ -46,9 +46,9 @@ public extension Schema {
         
         for p in md.properties {
             var v: Any?
-            if let s = v as? Storable {
-                v = s.storableRepresentation
-            }
+//            if let s = v as? Storable {
+//                v = s.storableRepresentation
+//            }
             if strict {
                 v = try stm.value(named: p.name, as: p.metadata.type)
             } else {

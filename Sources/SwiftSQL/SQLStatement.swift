@@ -90,8 +90,6 @@ public final class SQLStatement {
         return self
     }
     
-    // Future release will include the use of alternate SQLBinders
-//    private func _bind(_ value: (any SQLBindable)?, at index: Int) throws {
     public func bind(value: Any?, at index: Int) throws {
         let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
@@ -111,16 +109,15 @@ public final class SQLStatement {
             sqlite3_bind_double(ref, index, Double(value))
         }
         else if let value = value as? String {
-            sqlite3_bind_text(ref, index, value,
-                              -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(ref, index, value, -1, SQLITE_TRANSIENT)
         }
         else if let value = value as? (any StringProtocol) {
-            sqlite3_bind_text(ref, index, String(value),
-                              -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(ref, index, String(value), -1, SQLITE_TRANSIENT)
         }
         else {
-            throw SQLError(code: #line,
-                           message: "Cannot bind \(String(describing: value)) of type \(type(of: value))")
+            throw SQLError(
+                code: #line,
+                message: "Cannot bind \(String(describing: value)) of type \(type(of: value))")
         }
     }
 
@@ -242,30 +239,38 @@ public final class SQLStatement {
         return dict
     }
     
-    public func value(named: String, as vtype: Any.Type) throws -> Any {
+    public func value(named: String, as vtype: Any.Type = Any.self) throws -> Any {
         guard let ndx = columnIndex(forName: named)
         else { throw SQLError(code: #line, message: "No column named '\(named)'") }
         return try value(at: ndx, as: vtype)
     }
     
-    public func value(at ndx: Int, as vtype: Any.Type) throws -> Any {
-        let value = anyValue(at: ndx) as Any
-        if let opt = value as? OptionalProtocol,
-           let honestValue = opt.honestValue {
-            if type(of: honestValue) == vtype {
-                return value
-            } else {
-                return opt
-            }
+    public func value(at ndx: Int, as vtype: Any.Type = Any.self) throws -> Any {
+        var value = anyValue(at: ndx) as Any
+        if type(of: value) == vtype { return value }
+        if let opt = value as? OptionalProtocol {
+            value = opt.honestValue ?? value
         }
-        if type(of: value) == vtype {
-            return value
+        if let value = value as? (any FixedWidthInteger),
+            vtype is Bool.Type {
+            let ival = Int(value)
+            return (ival != 0)
         }
+        if let value = value as? (any FixedWidthInteger),
+           let fn = vtype as? any FixedWidthInteger.Type {
+            return fn.init(value)
+        }
+        if let value = value as? (any BinaryFloatingPoint),
+           let fn = vtype as? any BinaryFloatingPoint.Type {
+            return fn.init(value)
+        }
+        if type(of: value) == vtype { return value }
+
         throw SQLError(code: #line,
                        message: "Error reading \(value) column at '\(ndx)'")
     }
 
-    public func anyValue(at index: Int) -> Any? {
+    func anyValue(at index: Int) -> Any? {
 
         let index = Int32(index)
         let type = sqlite3_column_type(ref, index)

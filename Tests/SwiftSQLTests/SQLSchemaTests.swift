@@ -14,16 +14,16 @@ import SnapshotTesting
 protocol Entity {}
 
 final class SQLSchemaTests: XCTestCase {
-
+    
     override func setUpWithError() throws {
         // Set `isRecording` to reset Snapshots
-//        isRecording = true
+//                isRecording = true
     }
-
+    
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
-
+    
     func sampleDatabase() throws -> SQLConnection {
         let db = try! SQLConnection(location: .memory())
         try db.execute("CREATE TABLE Test (name TEXT, ndx INT)")
@@ -53,13 +53,12 @@ final class SQLSchemaTests: XCTestCase {
         let s = Schema(for: S.self)
         do {
             let v: S = try s.instantiate(from: statement, strict: true)
-            print (v)
+            assertSnapshot(matching: v, as: .dump)
         } catch {
             print(error.localizedDescription)
         }
-//        assertSnapshot(matching: v, as: .dump)
     }
-
+    
     func testInstantiateLoose() throws {
         // We delibertly do NOT select all columns
         // So some default values should remain
@@ -82,7 +81,7 @@ final class SQLSchemaTests: XCTestCase {
     
     func testInstantiate() throws {
         let db = try sampleDatabase()
-         let statement = try db.prepare("SELECT name, ndx FROM Test")
+        let statement = try db.prepare("SELECT name, ndx FROM Test")
         XCTAssertTrue(try statement.step())
         struct S: ExpressibleByDefault {
             var name: String
@@ -130,22 +129,22 @@ final class SQLSchemaTests: XCTestCase {
     func testTopic() throws {
         let db = try! SQLConnection(location: .memory())
         let s = Schema(for: Topic.self)
-
+        
         // CREATE
         let sql = s.sql(create: "topic")
         print(sql)
         try db.execute(sql)
-
+        
         // INSERT
         let insert = try db.prepare(s.sql(insert: "topic"))
         
-            try insert
-                .bind(1, "alpha", 23)
-                .execute()
-
+        try insert
+            .bind(1, "alpha", 23)
+            .execute()
+        
         // SELECT
         let select = try db.prepare(s.sql(select: "topic"))
-
+        
         while try select.step() {
             let t: Topic = try s.instantiate(from: select, strict: false)
             print (t)
@@ -153,10 +152,10 @@ final class SQLSchemaTests: XCTestCase {
         
         let t1  = Topic(id: "10", name: "beta")
         try insert.rebind(t1).execute()
-
+        
         let t2  = Topic(id: "20", name: "charlie")
         try insert.rebind(t2).execute()
-
+        
         try select.reset()
         var results = [Any]()
         
@@ -165,14 +164,14 @@ final class SQLSchemaTests: XCTestCase {
             results.append(t)
             print (t)
         }
-                
+        
         assertSnapshot(matching: results, as: .dump)
         
         let curs = try db.select(Topic.self, from: "topic")
         while let row = try curs.next() {
             print(row)
         }
-     }
+    }
     
     func testPragma() throws {
         let db = try! SQLConnection(location: .memory())
@@ -181,9 +180,9 @@ final class SQLSchemaTests: XCTestCase {
         // CREATE
         let sql = ts.sql(create: "topic")
         try db.execute(sql)
-
+        
         let info = try db.prepare("PRAGMA table_info(topic)")
-
+        
         while try info.step() {
             do {
                 let t: Table = try info.instantiate(strict: false)
@@ -202,7 +201,7 @@ final class SQLSchemaTests: XCTestCase {
         // CREATE
         let sql = ts.sql(create: "topic")
         try db.execute(sql)
-
+        
         // ERROR notnull is keyword
         let curs = try db.select(Table.self, from: "pragma_table_info('topic')")
         while let r = try curs.next() {
@@ -219,7 +218,7 @@ final class SQLSchemaTests: XCTestCase {
         let s = Schema(for: Person.self)
         assertSnapshot(matching: s.sql(select: "person"), as: .lines)
     }
-
+    
     func testSchemaSQLInsert() throws {
         let s = Schema(for: Person.self)
         assertSnapshot(matching: s.sql(insert: "person"), as: .lines)
@@ -294,7 +293,7 @@ extension Topic: ExpressibleByDefault {
     init(defaultContext: ()) {
         id = .init()
         name = ""
-//        value = nil
+        //        value = nil
     }
 }
 
