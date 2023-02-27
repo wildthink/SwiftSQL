@@ -15,17 +15,24 @@ protocol Entity {}
 
 final class SQLSchemaTests: XCTestCase {
     
-    override func setUpWithError() throws {
-        // Set `isRecording` to reset Snapshots
-//                isRecording = true
-    }
+    var tempDir: TempDirectory!
+    var storeURL: URL!
+    var db: SQLConnection!
     
+    override func setUpWithError() throws {
+        tempDir = try! TempDirectory()
+        storeURL = tempDir.file(named: "test-store-perf")
+        db = try! SQLConnection(location: .disk(url: storeURL))
+        // Set `isRecording` to reset Snapshots
+        //                isRecording = true
+    }
+        
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        tempDir = nil
     }
     
     func sampleDatabase() throws -> SQLConnection {
-        let db = try! SQLConnection(location: .memory())
+//        let db = try! SQLConnection(location: .memory())
         try db.execute("CREATE TABLE Test (name TEXT, ndx INT)")
         
         // WHEN/THEN binds the value
@@ -97,16 +104,16 @@ final class SQLSchemaTests: XCTestCase {
         assertSnapshot(matching: v, as: .dump)
     }
     
-    func testAPI() throws {
-        let a = [23]
-        let t = type(of: a as ArrayProtocol)
-        var s: Int? = 23
-        let sr = s.storableRepresentation
-        s = nil
-        let sn = s.storableRepresentation
-        assertSnapshot(matching: (s, sr, sn), as: .dump)
-        assertSnapshot(matching: (t.elementType, t.empty()), as: .dump)
-    }
+//    func testAPI() throws {
+//        let a = [23]
+//        let t = type(of: a as ArrayProtocol)
+//        var s: Int? = 23
+//        let sr = s.storableRepresentation
+//        s = nil
+//        let sn = s.storableRepresentation
+//        assertSnapshot(matching: (s, sr, sn), as: .dump)
+//        assertSnapshot(matching: (t.elementType, t.empty()), as: .dump)
+//    }
     
     // FIXME: Add JSON Column support
     func testTopicII() throws {
@@ -115,8 +122,8 @@ final class SQLSchemaTests: XCTestCase {
         try sc.create(in: db, table: "people")
         
         let date = Date(timeIntervalSince1970: 0)
-        let p1  = Person(id: 10, name: "George", dob: date, tags: ["one"], friends: [])
-        let p2  = Person(id: 20, name: "Jane", dob: date, tags: ["two"], friends: [])
+        let p1  = Person(id: 10, name: "George", dob: date, tags: ["one"])
+        let p2  = Person(id: 20, name: "Jane", dob: date, tags: ["two"])
         try sc.insert(in: db, [p1, p2])
         
         try sc.select(in: db, where: "", limit: 1) {
@@ -302,11 +309,10 @@ struct Person {
     var name: String
     var dob: Date?
     var tags: [String]
-    var friends: [Person]
 }
 
 extension Person: ExpressibleByDefault {
     init(defaultContext: ()) {
-        self = .init(id: 0, name: "", tags: [], friends: [])
+        self = .init(id: 0, name: "", tags: [])
     }
 }

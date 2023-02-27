@@ -33,6 +33,12 @@ public extension Schema {
     }
 }
 
+extension Optional: SQLiteStorable where Wrapped: SQLiteStorable {
+    public static var storeValueTransformer: StoreValueTransformer {
+        Wrapped.storeValueTransformer
+    }
+}
+
 public extension Schema {
     func instantiate<T: ExpressibleByDefault>(
         _ type: T.Type = T.self,
@@ -46,13 +52,13 @@ public extension Schema {
         
         for p in md.properties {
             var v: Any?
-//            if let s = v as? Storable {
-//                v = s.storableRepresentation
-//            }
+            let ptype = p.metadata.type
+            guard let ptype = ptype as? SQLiteStorable.Type
+            else { throw SQLError(uncovertable: ptype) }
             if strict {
-                v = try stm.value(named: p.name, as: p.metadata.type)
+                v = try stm.value(named: p.name, as: ptype)
             } else {
-                v = try? stm.value(named: p.name, as: p.metadata.type)
+                v = try? stm.value(named: p.name, as: ptype)
             }
             swift_setValue(v, to: &it, key: p.name)
         }
@@ -240,6 +246,7 @@ public extension SQLStatement {
     }
     
 
+    #if !JMJ_II
     func bind<T>(_ nob: inout T) throws -> SQLStatement {
         var params = [Storable?]()
         let md = swift_metadata(of: nob)
@@ -256,7 +263,12 @@ public extension SQLStatement {
         try self.bind(params)
         return self
     }
-
+    #else
+    func bind<T>(_ nob: inout T) throws -> SQLStatement {
+        return self
+    }
+    #endif
+    
     func instantiate<T: ExpressibleByDefault>(
         _ type: T.Type = T.self,
         strict: Bool = false
@@ -267,10 +279,13 @@ public extension SQLStatement {
         
         for p in md.properties {
             var v: Any?
+            let ptype = p.metadata.type
+            guard let ptype = ptype as? SQLiteStorable.Type
+            else { throw SQLError(uncovertable: ptype)}
             if strict {
-                v = try self.value(named: p.name, as: p.metadata.type)
+                v = try self.value(named: p.name, as: ptype)
             } else {
-                v = try? self.value(named: p.name, as: p.metadata.type)
+                v = try? self.value(named: p.name, as: ptype)
             }
             swift_setValue(v, to: &it, key: p.name)
         }
@@ -287,14 +302,23 @@ public extension SQLStatement {
         
         for p in md.properties {
             var v: Any?
+            let ptype = p.metadata.type
+            guard let ptype = ptype as? SQLiteStorable.Type
+            else { throw SQLError(uncovertable: ptype)}
             if strict {
-                v = try self.value(named: p.name, as: p.metadata.type)
+                v = try self.value(named: p.name, as: ptype)
             } else {
-                v = try? self.value(named: p.name, as: p.metadata.type)
+                v = try? self.value(named: p.name, as: ptype)
             }
             swift_setValue(v, to: &it, key: p.name)
         }
         return it
+    }
+}
+
+extension SQLError {
+    init(uncovertable type: Any.Type, line: Int32 = #line) {
+        self.init(code: line, message: "\(type) cannot be converted to SQLiteStorable")
     }
 }
 

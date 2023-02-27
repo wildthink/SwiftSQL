@@ -239,13 +239,15 @@ public final class SQLStatement {
         return dict
     }
     
-    public func value(named: String, as vtype: Any.Type = Any.self) throws -> Any {
+    /*
+    public func _storedValue(named: String, as vtype: Any.Type = Any.self) throws -> Any {
         guard let ndx = columnIndex(forName: named)
         else { throw SQLError(code: #line, message: "No column named '\(named)'") }
-        return try value(at: ndx, as: vtype)
+        return try _storedValue(at: ndx, as: vtype)
     }
     
-    public func value(at ndx: Int, as vtype: Any.Type = Any.self) throws -> Any {
+    /// The leftmost column of the result set has the index 0
+    public func _storedValue(at ndx: Int, as vtype: Any.Type = Any.self) throws -> Any {
         var value = anyValue(at: ndx) as Any
         if type(of: value) == vtype { return value }
         if let opt = value as? OptionalProtocol {
@@ -264,12 +266,51 @@ public final class SQLStatement {
            let fn = vtype as? any BinaryFloatingPoint.Type {
             return fn.init(value)
         }
-        if type(of: value) == vtype { return value }
-
-        throw SQLError(code: #line,
-                       message: "Error reading \(value) column at '\(ndx)'")
+        return value
+//        if type(of: value) == vtype { return value }
+//
+//        throw SQLError(code: #line,
+//                       message: "Error reading \(value) column at '\(ndx)'")
+    }
+*/
+    public func isNull(at index: Int) -> Bool {
+        let type = sqlite3_column_type(ref, Int32(index))
+        return type == SQLITE_NULL
+    }
+    
+    public func dataValue(at index: Int) -> Data {
+        let index = Int32(index)
+        if let bytes = sqlite3_column_blob(ref, index) {
+            let byteCount = sqlite3_column_bytes(ref, index)
+            return Data(bytes: bytes, count: Int(byteCount))
+        } else {
+            return Data()
+        }
     }
 
+    public func stringValue(at index: Int) -> String {
+        guard !isNull(at: index) else { return "" }
+        return String(cString: sqlite3_column_text(ref, Int32(index)))
+    }
+    
+    public func boolValue(at index: Int) -> Bool {
+        let raw = sqlite3_column_int64(ref, Int32(index))
+        return raw == 1
+    }
+
+    public func realValue<T: BinaryFloatingPoint>(at index: Int, preferredType: T.Type = Double) -> T {
+        let index = Int32(index)
+        let raw = sqlite3_column_double(ref, index)
+        return T(raw)
+    }
+
+    public func intValue<T: FixedWidthInteger>(at index: Int, preferredType: T.Type = Int64) -> T {
+        let index = Int32(index)
+        let raw = sqlite3_column_int64(ref, index)
+        return T(raw)
+    }
+    
+    /// The leftmost column of the result set has the index 0
     func anyValue(at index: Int) -> Any? {
 
         let index = Int32(index)
@@ -331,6 +372,7 @@ public final class SQLStatement {
         for index in 0..<columnCount {
             indices[columnName(at: index).lowercased()] = index
         }
+        print(#function, indices)
         return indices
     }()
 

@@ -28,7 +28,8 @@ let package = Package(
             name: "SwiftSQL",
             dependencies: [
 //                .product(name: "UniqueID", package: "uniqueid")
-            ]
+            ],
+            swiftSettings: settings()
         ),
         .testTarget(
             name: "SwiftSQLTests",
@@ -38,7 +39,8 @@ let package = Package(
                 "SwiftSQLTesting",
                 .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
                 .product(name: "KeyValueCoding", package: "KeyValueCoding"),
-            ]
+            ],
+            swiftSettings: settings()
         ),
          .target(
             name: "SwiftSQLTesting",
@@ -51,7 +53,8 @@ let package = Package(
             dependencies: [
                 "SwiftSQL",
                 .product(name: "KeyValueCoding", package: "KeyValueCoding"),
-            ]
+            ],
+            swiftSettings: settings()
         ),
         .testTarget(
             name: "SwiftSQLExtTests",
@@ -60,7 +63,15 @@ let package = Package(
                 "SwiftSQLExt",
                 "SwiftSQLTesting",
                 .product(name: "KeyValueCoding", package: "KeyValueCoding"),
-            ]
+            ],
+            swiftSettings: settings()
         ),
     ]
 )
+
+func settings() -> [SwiftSetting] {
+    print("SPM", #function)
+    return [
+    .define("JMJ_II")
+    ]
+}

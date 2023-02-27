@@ -4,10 +4,10 @@
     - value: 80
   ▿ (2 elements)
     - key: "level"
-    - value: "Alex"
+    - value: 66
   ▿ (2 elements)
     - key: "name"
-    - value: "66"
+    - value: "Alex"
   ▿ (2 elements)
     - key: "number"
     - value: 43.5

@@ -15,6 +15,7 @@ final class SQLStatementTests: XCTestCase {
 
         tempDir = try! TempDirectory()
         db = try! SQLConnection(location: .disk(url: tempDir.file(named: "test-statements")))
+        print("Test database at \(tempDir.url)")
     }
 
     override func tearDown() {

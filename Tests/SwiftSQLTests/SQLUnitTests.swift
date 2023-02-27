@@ -48,10 +48,10 @@ final class SQLUnitTests: XCTestCase {
         let row = select.dictionaryValue
         assertSnapshot(matching: row, as: .dump)
 
-        let str: String = try select.value(at: 1)
-        let int: Int = try select.value(at: 0)
-        let real: Double = try select.value(at: 3)
-        let data: Data = try select.value(at: 4)
+        let int: Int = try select.value(at: 0) // id
+        let str: String = try select.value(at: 1) // name
+        let real: Double = try select.value(at: 2) // level
+        let data: Data = try select.value(at: 3) // thunk
         assertSnapshot(matching: (data, str, real, int), as: .dump)
     }
 
@@ -138,8 +138,8 @@ final class SQLUnitTests: XCTestCase {
          CREATE TABLE test
         (
             Id INTEGER PRIMARY KEY NOT NULL,
-            Name VARCHAR,
             Level INTEGER,
+            Name VARCHAR,
             number REAL,
             thunk BLOB
         )
@@ -156,8 +156,8 @@ final class SQLUnitTests: XCTestCase {
 
         try insert
             .bind(80, at: 0)
-            .bind("Alex", at: 1)
-            .bind(66, at: 2)
+            .bind(66, at: 1)
+            .bind("Alex", at: 2)
             .bind(43.5, at: 3)
             .bind(d, at: 4)
             .execute()
