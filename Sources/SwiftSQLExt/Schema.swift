@@ -53,13 +53,30 @@ public extension Schema {
         for p in md.properties {
             var v: Any?
             let ptype = p.metadata.type
-            guard let ptype = ptype as? SQLiteStorable.Type
-            else { throw SQLError(uncovertable: ptype) }
-            if strict {
-                v = try stm.value(named: p.name, as: ptype)
-            } else {
-                v = try? stm.value(named: p.name, as: ptype)
+            guard let ndx = stm.columnIndex(forName: p.name)
+            else {
+                if strict {
+                    throw SQLError(code: #line, message: "Cannot instantiate \(type)")
+                } else {
+                    continue
+                }
             }
+            if let  ptype = ptype as? SQLiteStorable.Type {
+//               let ndx = stm.columnIndex(forName: p.name) {
+                v = try ptype.storeValueTransformer.decode(from: stm, at: ndx)
+            } else if ptype is Decodable.Type {
+                v = try JSONValueTransformer().decode(from: stm, at: ndx)
+            }
+            else {
+                throw SQLError(code: #line, message: "Cannot instantiate \(type)")
+            }
+//            guard let ptype = ptype as? SQLiteStorable.Type
+//            else { throw SQLError(uncovertable: ptype) }
+//            if strict {
+//                v = try stm.value(named: p.name, as: ptype)
+//            } else {
+//                v = try? stm.value(named: p.name, as: ptype)
+//            }
             swift_setValue(v, to: &it, key: p.name)
         }
         return it
@@ -74,10 +91,14 @@ public extension Schema {
     }
     
     func insert(in db: SQLConnection, _ rows: [E]) throws {
-        let insert = try db.prepare(sql(insert: table))
+        let sql = sql(insert: table)
+        let insert = try db.prepare(sql)
+        try db.execute("BEGIN TRANSACTION;")
         for row in rows {
-            try insert.rebind(row).execute()
+            try insert.reset()
+            try insert.bind(object: row).execute()
         }
+        try db.execute("COMMIT;")
     }
     
     func select(
@@ -239,19 +260,19 @@ public extension SQLConnection {
 // MARK: - SQLStatement Extensions
 public extension SQLStatement {
     
-    func rebind<T>(_ nob: T) throws -> SQLStatement {
-        var copy = nob
-        try reset()
+    func bind<T>(object: T) throws -> SQLStatement {
+        var copy = object
+//        defer { _ = try? reset() }
         return try bind(&copy)
     }
     
 
     #if !JMJ_II
-    func bind<T>(_ nob: inout T) throws -> SQLStatement {
+    func bind<T>(object: inout T) throws -> SQLStatement {
         var params = [Storable?]()
-        let md = swift_metadata(of: nob)
+        let md = swift_metadata(of: object)
         for p in md.properties {
-            let v = swift_value(of: &nob, key: p.name)
+            let v = swift_value(of: &object, key: p.name)
             if let v = v as? BuiltinStorable {
                 params.append((v.builtinRepresentation as! Storable))
             } else if let v = v as? Storable {
@@ -265,6 +286,40 @@ public extension SQLStatement {
     }
     #else
     func bind<T>(_ nob: inout T) throws -> SQLStatement {
+        var params = [SQLiteStorable?]()
+        let md = swift_metadata(of: nob)
+        var sv: SQLiteStorable?
+        
+        for p in md.properties {
+            let v = swift_value(of: &nob, key: p.name)
+            if let v = v as? SQLiteStorable,
+               let nob = type(of: v).storeValueTransformer.encode(value: v) as? SQLiteStorable {
+                sv = nob
+//                params.append(sv)
+//                try self.bind(sv, for: p.name)
+//                params.append(type(of: v).storeValueTransformer.encode(value: v))
+            } else if let v = v as? Encodable,
+                      let jv = JSONValueTransformer().encode(value: v) as? SQLiteStorable {
+                sv = jv
+//                params.append(sv)
+//                try self.bind(sv, for: p.name)
+            } else {
+//                params.append(nil)
+                sv = nil
+//                try self.bind(nil, for: p.name)
+            }
+            if let nob = sv {
+                if let bob = sv as? OptionalProtocol {
+                    params.append(bob.honestValue as? SQLiteStorable)
+                } else {
+                    params.append(nob)
+                }
+            } else {
+                params.append(nil)
+            }
+        }
+        try self.bind(params)
+//        try self.bind(SQLiteStorable?, for: <#T##String#>)
         return self
     }
     #endif

@@ -18,7 +18,26 @@ public protocol StoreValueTransformer {
     var swiftValueType: Any.Type { get }
     
     func encode(value: Any) -> Any
-    func decode(from: SQLStatement, at: Int)  -> Any
+    func decode(from: SQLStatement, at: Int) throws -> Any
+}
+
+public struct JSONValueTransformer: StoreValueTransformer {
+    public var storeValueType: Any.Type { String.self }
+    public var swiftValueType: Any.Type { Any.self }
+    
+    public func encode(value: Any) -> Any {
+        if let data = try? JSONSerialization.data(withJSONObject: value, options: []),
+           let string = String(data: data, encoding: String.Encoding.utf8) {
+            return string
+        } else { return "" }
+    }
+    
+    public func decode(from stm: SwiftSQL.SQLStatement, at ndx: Int) throws -> Any {
+        guard let data = stm.stringValue(at: ndx).data(using: .utf8)
+        else { throw SQLError(uncovertable: Any.self) }
+        let json = try JSONSerialization.jsonObject(with: data)
+        return json
+    }
 }
 
 public struct SQLiteStoreValueTransformer<StoreValue, SwiftValue>: StoreValueTransformer {
@@ -26,11 +45,11 @@ public struct SQLiteStoreValueTransformer<StoreValue, SwiftValue>: StoreValueTra
     public let storeValueType: Any.Type
     public let swiftValueType: Any.Type
     let encoder: (SwiftValue) -> StoreValue
-    let decoder: (SQLStatement, Int) -> SwiftValue
+    let decoder: (SQLStatement, Int) throws -> SwiftValue
     
     public init(
         encoder: @escaping (SwiftValue) -> StoreValue,
-        decoder: @escaping (SQLStatement, Int) -> SwiftValue)
+        decoder: @escaping (SQLStatement, Int) throws -> SwiftValue)
     {
         storeValueType = StoreValue.self
         swiftValueType = SwiftValue.self
@@ -45,8 +64,8 @@ public struct SQLiteStoreValueTransformer<StoreValue, SwiftValue>: StoreValueTra
         print(#function, value, "to", storeValueType)
         return encoder(value)
     }
-    public func decode(from: SQLStatement, at ndx: Int) -> Any {
-        return decoder(from, ndx)
+    public func decode(from: SQLStatement, at ndx: Int) throws -> Any {
+        return try decoder(from, ndx)
     }
 
 //    public func decode(from value: Any) -> Any {
@@ -114,6 +133,7 @@ extension Date: SQLiteStorable {
     }
 }
 
+/*
 extension Array: SQLiteStorable where Element: SQLiteStorable {
     public static var storeValueTransformer: StoreValueTransformer {
         SQLiteStoreValueTransformer(
@@ -149,6 +169,7 @@ extension Array: SQLiteStorable where Element: SQLiteStorable {
         })
     }
 }
+*/
 
 func stringify(json: Any, prettyPrinted: Bool = false) -> String {
     var options: JSONSerialization.WritingOptions = []
@@ -169,27 +190,58 @@ func stringify(json: Any, prettyPrinted: Bool = false) -> String {
 }
 #endif
 
+public extension SQLStatement {
+    func sql() -> String? {
+        guard let cstr = sqlite3_expanded_sql(ref)
+        else { return nil }
+        return String(cString: cstr)
+    }
+}
+
+/*
+ ```
+ sqlite3_bind_text(stmt, 7, strtok (NULL, "\t"), -1, SQLITE_TRANSIENT);    // Get Column value
+ 
+ sqlite3_step(stmt);        // Execute the SQL Statement
+ sqlite3_clear_bindings(stmt);    // Clear bindings
+ sqlite3_reset(stmt);        // Reset VDBE
+```
+ */
+
 extension SQLStatement {
     /// The leftmost column of the result set has the index 0
     public func value<T: SQLiteStorable>(named: String, as t: T.Type = T.self)
     throws -> T {
-//        guard let value = try? storedValue(named: named, as: t),
-        guard let ndx = columnIndex(forName: named),
-              let svalue = T.storeValueTransformer.decode(from: self, at: ndx) as? T
-        else { throw SQLError(uncovertable: t) }
-        return svalue
+        guard let ndx = columnIndex(forName: named)
+        else { throw SQLError(code: #line, message: "No column \(named) found") }
+        return try value(at: ndx, as: t)
+
+//        guard let ndx = columnIndex(forName: named),
+//              let svalue = try T.storeValueTransformer.decode(from: self, at: ndx) as? T
+//        else { throw SQLError(uncovertable: t) }
+//        return svalue
     }
     
     /// The leftmost column of the result set has the index 0
     public func value<T: SQLiteStorable>(at ndx: Int, as t: T.Type = T.self)
     throws -> T {
-        guard // let value = try? storedValue(at: ndx, as: t),
-              let svalue = T.storeValueTransformer.decode(from: self, at: ndx) as? T
-        else { throw SQLError(uncovertable: t) }
-        return svalue
+        if let svalue =
+        try T.storeValueTransformer.decode(from: self, at: ndx) as? T {
+            return svalue
+        }
+        else if let cv =
+        try JSONValueTransformer().decode(from: self, at: ndx) as? T {
+            return cv
+        }
+        // else
+        throw SQLError(uncovertable: t)
+//        guard
+//              let svalue = try T.storeValueTransformer.decode(from: self, at: ndx) as? T
+//        else { throw SQLError(uncovertable: t) }
+//        return svalue
     }
     
-    // MARK: - SQL Bind to Statement
+    // MARK: - Public SQL Statement Binding functions
     @discardableResult
     public func bind(_ parameters: SQLiteStorable?...) throws -> Self {
         try bind(parameters)
@@ -212,12 +264,10 @@ extension SQLStatement {
         return self
     }
 
+    // MARK: - Private SQL Statement Binding functions
     @discardableResult
-    public func bind(_ value: SQLiteStorable?, for name: String) throws -> Self {
+    public func bind(_ value: Any?, for name: String) throws -> Self {
         let ndx = sqlite3_bind_parameter_index(ref, name)
-        guard ndx > 0 else {
-            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
-        }
         return try bind(value, at: Int(ndx-1))
     }
 
@@ -230,6 +280,11 @@ extension SQLStatement {
         }
         if let value = value as? SQLiteStorable {
             let bv = type(of: value).storeValueTransformer.encode(value: value)
+            try bind(value: bv, at: index)
+            return self
+        }
+        if let value = value as? Encodable {
+            let bv = JSONValueTransformer().encode(value: value)
             try bind(value: bv, at: index)
             return self
         }

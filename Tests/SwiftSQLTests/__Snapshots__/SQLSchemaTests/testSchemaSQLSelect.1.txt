@@ -1,1 +1,1 @@
-SELECT id, name, dob, tags, friends FROM person
+SELECT id, name, dob, tags FROM person

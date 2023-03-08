@@ -5,16 +5,43 @@
 import XCTest
 import Foundation
 import SwiftSQL
+import SnapshotTesting
 
 final class SQLDataTypeTests: XCTestCase {
     var db: SQLConnection!
 
     override func setUp() {
         super.setUp()
+        let path = "/Users/jason/data/xctest.db"
 
-        db = try! SQLConnection(location: .memory())
+//        db = try! SQLConnection(location: .memory())
+        try? FileManager.default.removeItem(atPath: path)
+        db = try! SQLConnection(url: URL(fileURLWithPath: path))
     }
 
+    func testRun() throws {
+        // CREATE Table
+        try db.execute("""
+            CREATE TABLE Test (
+            id INTEGER PRIMARY KEY,
+            i INTEGER,
+            f REAL,
+            b BLOB,
+            t TEXT,
+            ja LIST
+        )
+        """)
+
+        let insert = try db.prepare("""
+            INSERT INTO Test (id, i, f, b, t, ja) VALUES (?,?,?,?,?,?)
+        """)
+        
+        try insert
+            .bind(1, 10, 10.25, Data(), "string", "[1, 2, 3]")
+            .execute()
+        print("Done", #function)
+    }
+    
     func testInt32() throws {
         try db.execute("CREATE TABLE Test (Field INTEGER)")
 
@@ -68,6 +95,8 @@ final class SQLDataTypeTests: XCTestCase {
         // WHEN/THEN reads the value
         let statement = try db.prepare("SELECT Field FROM Test")
         XCTAssertTrue(try statement.step())
+        let pl = statement.dictionaryValue
+        print(statement.sql() ?? "", pl)
         XCTAssertEqual(statement.column(at: 0), 10.5)
     }
 

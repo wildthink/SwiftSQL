@@ -90,6 +90,7 @@ public final class SQLStatement {
         return self
     }
     
+    /// The leftmost SQL parameter has an index of 1
     public func bind(value: Any?, at index: Int) throws {
         let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
@@ -298,13 +299,13 @@ public final class SQLStatement {
         return raw == 1
     }
 
-    public func realValue<T: BinaryFloatingPoint>(at index: Int, preferredType: T.Type = Double) -> T {
+    public func realValue<T: BinaryFloatingPoint>(at index: Int, preferredType: T.Type = Double.self) -> T {
         let index = Int32(index)
         let raw = sqlite3_column_double(ref, index)
         return T(raw)
     }
 
-    public func intValue<T: FixedWidthInteger>(at index: Int, preferredType: T.Type = Int64) -> T {
+    public func intValue<T: FixedWidthInteger>(at index: Int, preferredType: T.Type = Int64.self) -> T {
         let index = Int32(index)
         let raw = sqlite3_column_int64(ref, index)
         return T(raw)

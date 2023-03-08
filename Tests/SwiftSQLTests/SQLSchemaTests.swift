@@ -18,13 +18,16 @@ final class SQLSchemaTests: XCTestCase {
     var tempDir: TempDirectory!
     var storeURL: URL!
     var db: SQLConnection!
+    var db_path: String?
     
     override func setUpWithError() throws {
         tempDir = try! TempDirectory()
         storeURL = tempDir.file(named: "test-store-perf")
         db = try! SQLConnection(location: .disk(url: storeURL))
+        db_path = storeURL.absoluteString
+        print("Test DB", storeURL.absoluteString)
         // Set `isRecording` to reset Snapshots
-        //                isRecording = true
+//        isRecording = true
     }
         
     override func tearDownWithError() throws {
@@ -117,16 +120,43 @@ final class SQLSchemaTests: XCTestCase {
     
     // FIXME: Add JSON Column support
     func testTopicII() throws {
-        let db = try! SQLConnection(location: .memory())
+//        let db = try! SQLConnection(location: .memory())
         let sc = Schema(table: "people", for: Person.self)
         try sc.create(in: db, table: "people")
-        
+
+        if let db_path {
+            print(#function, db_path)
+        }
+
         let date = Date(timeIntervalSince1970: 0)
-        let p1  = Person(id: 10, name: "George", dob: date, tags: ["one"])
-        let p2  = Person(id: 20, name: "Jane", dob: date, tags: ["two"])
-        try sc.insert(in: db, [p1, p2])
-        
-        try sc.select(in: db, where: "", limit: 1) {
+
+        let sql = sc.sql(insert: "people")
+        let insert = try db.prepare(sql)
+        try insert
+            .bind(Int64(99), at: 0)
+            .bind("Alice", at: 1)
+            .bind(date, at: 2)
+            .bind(["tag"], at: 3)
+            .execute()
+
+        try insert.reset()
+        try insert
+            .bind(Int64(88), at: 0)
+            .bind("Bob", at: 1)
+            .bind(date, at: 2)
+            .bind(["tag"], at: 3)
+            .execute()
+
+        let p1  = Person(id: 100, name: "George", dob: date, tags: ["one"])
+        let p2  = Person(id: 200, name: "Jane", dob: date, tags: ["two", "three"])
+//        try sc.insert(in: db, [p1, p2])
+        try insert.reset()
+        try insert.bind(object: p1).execute()
+
+        try insert.reset()
+        try insert.bind(object: p2).execute()
+
+         try sc.select(in: db, where: "", limit: 1) {
             print($0)
         }
         
@@ -149,6 +179,14 @@ final class SQLSchemaTests: XCTestCase {
             .bind(1, "alpha", 23)
             .execute()
         
+        let t1  = Topic(id: "100", name: "beta")
+        try insert.reset()
+        try insert.bind(object: t1).execute()
+        
+        let t2  = Topic(id: "200", name: "charlie")
+        try insert.reset()
+        try insert.bind(object: t2).execute()
+
         // SELECT
         let select = try db.prepare(s.sql(select: "topic"))
         
@@ -157,11 +195,11 @@ final class SQLSchemaTests: XCTestCase {
             print (t)
         }
         
-        let t1  = Topic(id: "10", name: "beta")
-        try insert.rebind(t1).execute()
-        
-        let t2  = Topic(id: "20", name: "charlie")
-        try insert.rebind(t2).execute()
+//        let t1  = Topic(id: "100", name: "beta")
+//        try insert.bind(t1).execute()
+//
+//        let t2  = Topic(id: "200", name: "charlie")
+//        try insert.bind(t2).execute()
         
         try select.reset()
         var results = [Any]()

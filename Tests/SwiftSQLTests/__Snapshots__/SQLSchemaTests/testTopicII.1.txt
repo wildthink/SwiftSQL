@@ -1,5 +1,7 @@
 # people
-(id: nil, name: nil, dob: nil, tags: nil)
-(id: nil, name: nil, dob: nil, tags: nil)
+(id: 99, name: Alice, dob: 1.3964861880825545e+19, tags: ["tag"])
+(id: 88, name: Bob, dob: 1.3964861880825545e+19, tags: ["tag"])
+(id: 100, name: George, dob: 1.3964861880825545e+19, tags: ["one"])
+(id: 200, name: Jane, dob: 1.3964861880825545e+19, tags: ["two","three"])
 
 # EOF
