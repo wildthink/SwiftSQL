@@ -1,0 +1,10 @@
+▿ 3 elements
+  ▿ Topic
+    - id: "1"
+    - name: "alpha"
+  ▿ Topic
+    - id: "100"
+    - name: "beta"
+  ▿ Topic
+    - id: "200"
+    - name: "charlie"

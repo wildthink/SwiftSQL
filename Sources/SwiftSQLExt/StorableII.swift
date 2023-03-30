@@ -191,10 +191,14 @@ func stringify(json: Any, prettyPrinted: Bool = false) -> String {
 #endif
 
 public extension SQLStatement {
-    func sql() -> String? {
-        guard let cstr = sqlite3_expanded_sql(ref)
-        else { return nil }
-        return String(cString: cstr)
+    func sql(expanded: Bool = false) -> String? {
+        if expanded {
+            guard let cstr = sqlite3_expanded_sql(ref) else { return nil }
+            return String(cString: cstr)
+        } else {
+            guard let cstr = sqlite3_sql(ref) else { return nil }
+            return String(cString: cstr)
+        }
     }
 }
 
