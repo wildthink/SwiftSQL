@@ -44,21 +44,27 @@ final class SQLStatementTests: XCTestCase {
         try db.createTables()
 
         let insert = try db.prepare("""
-        INSERT INTO Users (Level, Name)
-        VALUES (?, ?)
+        INSERT INTO Users (Level, Name, blob)
+        VALUES (?, ?, ?)
         """)
 
         // WHEN
+        let v: Any? = 80
         try insert
-            .bind(80, at: 0)
+            .bind(v, at: 0)
             .bind("Alex", at: 1)
+            .bind(Data(), at: 2)
             .execute()
 
+        let cnt = insert.bindParameterCount
+        XCTAssertEqual(cnt, 3)
+
         // THEN
-        let select = try db.prepare("SELECT Level, Name FROM Users")
+        let select = try db.prepare("SELECT Level, Name, blob FROM Users")
         XCTAssertTrue(try select.step())
         XCTAssertEqual(select.column(at: 0), 80)
         XCTAssertEqual(select.column(at: 1), "Alex")
+        XCTAssertEqual(select.column(at: 2), Data())
     }
 
     func testBindNilUsingIndexes() throws {
@@ -73,7 +79,7 @@ final class SQLStatementTests: XCTestCase {
         // WHEN
         try statement
             .bind(80, at: 0)
-            .bind(nil as String?, at: 1)
+            .bind(nil, at: 1)
             .execute()
 
         // THEN
@@ -264,7 +270,7 @@ final class SQLStatementTests: XCTestCase {
         let statement = try db.prepare("SELECT * FROM Users")
 
         // THEN
-        XCTAssertEqual(statement.columnCount, 3)
+        XCTAssertEqual(statement.columnCount, 4)
     }
 
     func testColumnNameAtIndex() throws {
@@ -284,15 +290,16 @@ extension SQLConnection {
         (
             Id INTEGER PRIMARY KEY NOT NULL,
             Name VARCHAR,
-            Level INTEGER
+            Level INTEGER,
+            blob BLOB
         )
         """)
     }
 
     func populateStore() throws {
         let statement = try self.prepare("""
-        INSERT INTO Users (Name, Level)
-        VALUES (?, ?)
+        INSERT INTO Users (Name, Level, blob)
+        VALUES (?, ?, ?)
         """)
 
         try statement

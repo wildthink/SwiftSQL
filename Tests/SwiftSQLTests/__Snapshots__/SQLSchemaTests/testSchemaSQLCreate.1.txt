@@ -1,0 +1,7 @@
+CREATE TABLE person (
+	id INT PRIMARY KEY,
+	name TEXT,
+	dob DATE,
+	tags LIST,
+	friends LIST
+)

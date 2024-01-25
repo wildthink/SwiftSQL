@@ -1,0 +1,5 @@
+# people
+(id: 10, name: George, dob: 1.3964861880825545e+19, tags: nil, friends: nil)
+(id: 20, name: Jane, dob: 1.3964861880825545e+19, tags: nil, friends: nil)
+
+# EOF

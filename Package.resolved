@@ -1,34 +1,32 @@
 {
-  "object": {
-    "pins": [
-      {
-        "package": "KeyValueCoding",
-        "repositoryURL": "https://github.com/wildthink/KeyValueCoding.git",
-        "state": {
-          "branch": null,
-          "revision": "69640864f3f3f6f8e0c8e6421e0ad53074c2c54f",
-          "version": "1.1.0"
-        }
-      },
-      {
-        "package": "swift-snapshot-testing",
-        "repositoryURL": "https://github.com/pointfreeco/swift-snapshot-testing",
-        "state": {
-          "branch": null,
-          "revision": "cef5b3f6f11781dd4591bdd1dd0a3d22bd609334",
-          "version": "1.11.0"
-        }
-      },
-      {
-        "package": "UniqueID",
-        "repositoryURL": "https://github.com/wildthink/uniqueid",
-        "state": {
-          "branch": null,
-          "revision": "85719620b1857bcff2ab748194bd69148613dca5",
-          "version": "1.0.3"
-        }
+  "pins" : [
+    {
+      "identity" : "keyvaluecoding",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/wildthink/KeyValueCoding.git",
+      "state" : {
+        "revision" : "69640864f3f3f6f8e0c8e6421e0ad53074c2c54f",
+        "version" : "1.1.0"
       }
-    ]
-  },
-  "version": 1
+    },
+    {
+      "identity" : "swift-snapshot-testing",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pointfreeco/swift-snapshot-testing",
+      "state" : {
+        "revision" : "8e68404f641300bfd0e37d478683bb275926760c",
+        "version" : "1.15.2"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-syntax.git",
+      "state" : {
+        "revision" : "64889f0c732f210a935a0ad7cda38f77f876262d",
+        "version" : "509.1.1"
+      }
+    }
+  ],
+  "version" : 2
 }

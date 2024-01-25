@@ -37,7 +37,6 @@ final class PerformanceTests: XCTestCase {
         INSERT INTO Users (Name, Surname, Level)
         VALUES (?, ?, ?)
         """)
-
         measure {
             for _ in 0..<500 {
                 try! statement

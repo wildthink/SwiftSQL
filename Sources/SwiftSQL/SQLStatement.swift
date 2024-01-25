@@ -89,98 +89,17 @@ public final class SQLStatement {
         try isOK(sqlite3_step(ref))
         return self
     }
+    
+    public func bind(value: Any?, at index: Int) throws {
+        let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-    // MARK: Binding Parameters
-
-    /// Binds values to the statement parameters.
-    ///
-    ///     try db.prepare("INSERT INTO Users (Level, Name) VALUES (?, ?)")
-    ///        .bind(80, "John")
-    ///        .execute()
-    ///
-    @discardableResult
-    public func bind(_ parameters: (any SQLBindable)?...) throws -> Self {
-        try bind(parameters)
-        return self
-    }
-
-    /// Binds values to the statement parameters.
-    ///
-    ///     try db.prepare("INSERT INTO Users (Level, Name) VALUES (?, ?)")
-    ///        .bind([80, "John"])
-    ///        .execute()
-    ///
-    @discardableResult
-    public func bind(_ parameters: [(any SQLBindable)?]) throws -> Self {
-        for (index, value) in zip(parameters.indices, parameters) {
-            try _bind(value, at: Int(index + 1))
-        }
-        return self
-    }
-
-    /// Binds values to the named statement parameters.
-    ///
-    ///     let row = try db.prepare("SELECT Level, Name FROM Users WHERE Name = :param LIMIT 1")
-    ///         .bind([":param": "John""])
-    ///         .next()
-    ///
-    /// - parameter name: The name of the parameter. If the name is missing, throws
-    /// an error.
-    @discardableResult
-    public func bind(_ parameters: [String: (any SQLBindable)?]) throws -> Self {
-        for (key, value) in parameters {
-            try _bind(value, for: key)
-        }
-        return self
-    }
-
-    /// Binds values to the parameter with the given name.
-    ///
-    ///     let row = try db.prepare("SELECT Level, Name FROM Users WHERE Name = :param LIMIT 1")
-    ///         .bind("John", for: ":param")
-    ///         .next()
-    ///
-    /// - parameter name: The name of the parameter. If the name is missing, throws
-    /// an error.
-    @discardableResult
-    public func bind<B: SQLBindable>(_ value: B?, for name: String) throws -> Self {
-        try _bind(value, for: name)
-        return self
-    }
-
-    /// Binds value to the given index.
-    ///
-    /// - parameter index: The index starts at 0.
-    @discardableResult
-    public func bind<B: SQLBindable>(_ value: B?, at index: Int) throws -> Self {
-        try _bind(value, at: (index + 1))
-        return self
-    }
-
-    private func _bind(_ value: (any SQLBindable)?, for name: String) throws {
-        let index = sqlite3_bind_parameter_index(ref, name)
-        guard index > 0 else {
-            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
-        }
-        try _bind(value, at: Int(index))
-    }
-
-    private func _bind<B: SQLBindable>(_ value: B?, for name: String) throws {
-        let index = sqlite3_bind_parameter_index(ref, name)
-        guard index > 0 else {
-            throw SQLError(code: SQLITE_MISUSE, message: "Failed to find parameter named \(name)")
-        }
-        try _bind(value, at: Int(index))
-    }
-
-    // Future release will include the use of alternate SQLBinders
-//    private func _bind(_ value: (any SQLBindable)?, at index: Int) throws {
-    private func _bind(_ value: Any?, at index: Int) throws {
         let index = Int32(index)
         if value == nil {
             sqlite3_bind_null(ref, index)
         }
-        else if let value = value as? Data {
+        else if let value = value as? Bool {
+            sqlite3_bind_int64(ref, index, value ? 1 : 0)
+        } else if let value = value as? Data {
             sqlite3_bind_blob(ref, index, Array(value), Int32(value.count), SQLITE_TRANSIENT)
         }
         else if let value = value as? (any FixedWidthInteger) {
@@ -189,19 +108,18 @@ public final class SQLStatement {
         else if let value = value as? (any BinaryFloatingPoint) {
             sqlite3_bind_double(ref, index, Double(value))
         }
+        else if let value = value as? String {
+            sqlite3_bind_text(ref, index, value, -1, SQLITE_TRANSIENT)
+        }
         else if let value = value as? (any StringProtocol) {
-            sqlite3_bind_text(ref, index, String(value),
-                              -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(ref, index, String(value), -1, SQLITE_TRANSIENT)
+        }
+        else {
+            throw SQLError(
+                code: #line,
+                message: "Cannot bind \(String(describing: value)) of type \(type(of: value))")
         }
     }
-
-//    private func _bind<B: SQLBindable>(_ value: B?, at index: Int) throws {
-//        if let value = value {
-//            B.defaultSQLBinder.setf(self, Int32(index), value)
-//        } else {
-//            sqlite3_bind_null(ref, Int32(index))
-//        }
-//    }
 
     /// Clears bindings.
     ///
@@ -228,7 +146,7 @@ public final class SQLStatement {
         Int(sqlite3_bind_parameter_count(ref))
     }
 
-    // MARK: Accessing Columns
+    // MARK: Accessing Column Values
 
     /// Returns a single column of the current result row of a query.
     ///
@@ -236,63 +154,67 @@ public final class SQLStatement {
     /// column index is out of range, the result is undefined.
     ///
     /// - parameter index: The leftmost column of the result set has the index 0.
-    public func column<T: SQLBindable>(at index: Int) -> T {
-        T.defaultSQLBinder.getf(self, Int32(index))
-    }
-
-    /// Returns a single column of the current result row of a query. If the
-    /// value is `Null`, returns `nil.`
-    ///
-    /// If the SQL statement does not currently point to a valid row, or if the
-    /// column index is out of range, the result is undefined.
-    ///
-    /// - parameter index: The leftmost column of the result set has the index 0.
-    public func column<T: SQLBindable>(at index: Int) -> T? {
-        if sqlite3_column_type(ref, Int32(index)) == SQLITE_NULL {
-            return nil
-        } else {
-            return T.defaultSQLBinder.getf(self, Int32(index))
-        }
-    }
 
     // MARK: - Builtin Column Value Types
     // SQLITE_TEXT
-    public func value(at ndx: Int) -> String {
+    public func column(at ndx: Int) -> String {
+        column(at: ndx) ?? ""
+    }
+
+    public func column(at ndx: Int) -> String? {
         sqlite3_column_type(ref, Int32(ndx)) == SQLITE_TEXT
         ? String(cString: sqlite3_column_text(ref, Int32(ndx)))
-        : ""
+        : nil
     }
 
     // SQLITE_INTEGER
-    public func value<V: FixedWidthInteger>(
+    public func column<V: FixedWidthInteger>(
         at ndx: Int,
         as vtype: V.Type = V.self)
     -> V {
+        column(at: ndx) ?? .zero
+    }
+
+    public func column<V: FixedWidthInteger>(
+        at ndx: Int,
+        as vtype: V.Type = V.self)
+    -> V? {
         sqlite3_column_type(ref, Int32(ndx)) == SQLITE_INTEGER
         ? V(sqlite3_column_int64(ref, Int32(ndx)))
-        : .zero
+        : nil
     }
 
     // SQLITE_FLOAT
-    public func value<V: BinaryFloatingPoint>(
+    public func column<V: BinaryFloatingPoint>(
         at ndx: Int,
         as v: V.Type = V.self)
     -> V {
+        column(at: ndx) ?? .zero
+    }
+
+    public func column<V: BinaryFloatingPoint>(
+        at ndx: Int,
+        as v: V.Type = V.self)
+    -> V? {
         sqlite3_column_type(ref, Int32(ndx)) == SQLITE_FLOAT
         ? V(sqlite3_column_double(ref, Int32(ndx)))
-        : .zero
+        : nil
     }
 
     // SQLITE_BLOB
-    public func value(at index: Int) -> Data {
+    public func column(at index: Int) -> Data {
+        column(at: index) ?? Data()
+    }
+
+    public func column(at index: Int) -> Data? {
         let ndx = Int32(index)
         guard sqlite3_column_type(ref, ndx) == SQLITE_BLOB
-        else { return Data() }
+        else { return nil }
         if let bytes = sqlite3_column_blob(ref, ndx) {
             let byteCount = sqlite3_column_bytes(ref, ndx)
             return Data(bytes: bytes, count: Int(byteCount))
         } else {
-            return Data()
+            return nil
         }
     }
 
@@ -304,9 +226,52 @@ public final class SQLStatement {
         }
         return dict
     }
+    
+    public var keyValuePairs: [(key: String, value: Any)] {
+        var dict: [(key: String, value: Any)] = .init()
+        for n in columnNames {
+            if let value = self.anyValue(at: columnIndex(forName: n)!) {
+                dict.append((n, value))
+            } else {
+                dict.append((n, "nil"))
+            }
+        }
+        return dict
+    }
+    
+    public func value(named: String, as vtype: Any.Type = Any.self) throws -> Any {
+        guard let ndx = columnIndex(forName: named)
+        else { throw SQLError(code: #line, message: "No column named '\(named)'") }
+        return try value(at: ndx, as: vtype)
+    }
+    
+    public func value(at ndx: Int, as vtype: Any.Type = Any.self) throws -> Any {
+        var value = anyValue(at: ndx) as Any
+        if type(of: value) == vtype { return value }
+        if let opt = value as? OptionalProtocol {
+            value = opt.honestValue ?? value
+        }
+        if let value = value as? (any FixedWidthInteger),
+            vtype is Bool.Type {
+            let ival = Int(value)
+            return (ival != 0)
+        }
+        if let value = value as? (any FixedWidthInteger),
+           let fn = vtype as? any FixedWidthInteger.Type {
+            return fn.init(value)
+        }
+        if let value = value as? (any BinaryFloatingPoint),
+           let fn = vtype as? any BinaryFloatingPoint.Type {
+            return fn.init(value)
+        }
+        if type(of: value) == vtype { return value }
 
-//    @_disfavoredOverload
-    public func anyValue(at index: Int) -> Any? {
+        throw SQLError(code: #line,
+                       message: "Error reading \(value) column at '\(ndx)'")
+    }
+
+    func anyValue(at index: Int) -> Any? {
+
         let index = Int32(index)
         let type = sqlite3_column_type(ref, index)
         // switch (type, V.self) {

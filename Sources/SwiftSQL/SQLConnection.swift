@@ -15,7 +15,7 @@ import SQLite3
 /// [documentation](https://www.sqlite.org/isolation.html).
 public final class SQLConnection {
     public private(set) var ref: OpaquePointer!
-    let _hook: Hook = .init()
+    let _hook: Hook // = .init() jmj
 
     /// Returns the last [INSERT row id](https://www.sqlite.org/c3ref/last_insert_rowid.html)
     /// of the database connection. Returns `0` if no successfull INSERT into rowid
@@ -52,9 +52,16 @@ public final class SQLConnection {
     ///
     /// - note: See [SQLite: Result and Error Codes](https://www.sqlite.org/rescode.html)
     /// for more information.
-    public init(location: Location, mode: Mode = .writable(create: true), options: Options = Options()) throws {
+    public init(
+        location: Location,
+        mode: Mode = .writable(create: true),
+        options: Options = Options(),
+        hook: Hook = .default
+    ) throws {
         let path: String
         var flags: Int32 = 0
+
+        _hook = hook
 
         switch mode {
         case .readonly:
@@ -91,11 +98,23 @@ public final class SQLConnection {
         }
 
         try isOK(sqlite3_open_v2(path, &ref, flags, nil))
+        
+        _hook.registerHandlers(self)
     }
 
     deinit {
          try? close()
      }
+
+    // MARK:
+    /// [Executes](https://www.sqlite.org/c3ref/changes.html) to return the number of rows changed by the most recent statement.
+    public var lastChangeCount: Int64 {
+        if #available(macOS 12.3, *) {
+            sqlite3_changes64(ref)
+        } else {
+            Int64(sqlite3_changes(ref))
+        }
+    }
 
     // MARK: Execute
 

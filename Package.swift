@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,39 +6,47 @@ import PackageDescription
 let package = Package(
     name: "SwiftSQL",
     platforms: [
-        .macOS(.v11),
-        .iOS(.v13),
+        .macOS(.v13),
+        .iOS(.v15),
         .tvOS(.v11),
         .watchOS(.v4)
     ],
     products: [
-        // Products define the executables and libraries produced by a package, and make them visible to other packages.
         .library(name: "SwiftSQL", targets: ["SwiftSQL"]),
         .library(name: "SwiftSQLExt", targets: ["SwiftSQLExt"]),
+        .library(name: "SwiftSQLTesting", targets: ["SwiftSQLTesting"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/wildthink/uniqueid", .upToNextMajor(from: "1.0.0")),
+//        .package(url: "https://github.com/wildthink/uniqueid", .upToNextMajor(from: "1.0.0")),
         .package(url: "https://github.com/wildthink/KeyValueCoding.git", from: "1.0.0"),
         .package(
             url: "https://github.com/pointfreeco/swift-snapshot-testing",
-            from: "1.10.0"),
+            from: "1.12.0"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
-        // Targets can depend on other targets in this package, and on products in packages which this package depends on.
-        .target(
+         .target(
             name: "SwiftSQL",
             dependencies: [
-                .product(name: "UniqueID", package: "uniqueid")
+//                .product(name: "UniqueID", package: "uniqueid")
             ]
         ),
         .testTarget(
             name: "SwiftSQLTests",
             dependencies: [
                 "SwiftSQL",
+                "SwiftSQLExt",
+                "SwiftSQLTesting",
                 .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+                .product(name: "KeyValueCoding", package: "KeyValueCoding"),
             ]
         ),
+         .target(
+            name: "SwiftSQLTesting",
+            dependencies: [
+                "SwiftSQL",
+                .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+            ]
+         ),
         .target(
             name: "SwiftSQLExt",
             dependencies: [
@@ -48,7 +56,13 @@ let package = Package(
         ),
         .testTarget(
             name: "SwiftSQLExtTests",
-            dependencies: ["SwiftSQL", "SwiftSQLExt"]
+            dependencies: [
+                "SwiftSQL",
+                "SwiftSQLExt",
+                "SwiftSQLTesting",
+                .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+                .product(name: "KeyValueCoding", package: "KeyValueCoding"),
+            ]
         ),
     ]
 )
