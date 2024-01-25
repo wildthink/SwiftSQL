@@ -9,7 +9,9 @@ import XCTest
 import SwiftSQL
 import SwiftSQLExt
 //import KeyValueCoding
+#if canImport(SnapshotTesting)
 import SnapshotTesting
+#endif
 
 final class QueryTests: XCTestCase {
 

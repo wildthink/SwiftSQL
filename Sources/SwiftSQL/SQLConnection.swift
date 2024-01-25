@@ -109,7 +109,11 @@ public final class SQLConnection {
     // MARK:
     /// [Executes](https://www.sqlite.org/c3ref/changes.html) to return the number of rows changed by the most recent statement.
     public var lastChangeCount: Int64 {
-        sqlite3_changes64(ref)
+        if #available(macOS 12.3, *) {
+            sqlite3_changes64(ref)
+        } else {
+            Int64(sqlite3_changes(ref))
+        }
     }
 
     // MARK: Execute

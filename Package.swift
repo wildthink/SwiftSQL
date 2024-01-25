@@ -7,7 +7,7 @@ let package = Package(
     name: "SwiftSQL",
     platforms: [
         .macOS(.v13),
-        .iOS(.v14),
+        .iOS(.v15),
         .tvOS(.v11),
         .watchOS(.v4)
     ],
@@ -21,7 +21,7 @@ let package = Package(
         .package(url: "https://github.com/wildthink/KeyValueCoding.git", from: "1.0.0"),
         .package(
             url: "https://github.com/pointfreeco/swift-snapshot-testing",
-            from: "1.10.0"),
+            from: "1.12.0"),
     ],
     targets: [
          .target(
@@ -43,6 +43,7 @@ let package = Package(
          .target(
             name: "SwiftSQLTesting",
             dependencies: [
+                "SwiftSQL",
                 .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
             ]
          ),
@@ -59,6 +60,7 @@ let package = Package(
                 "SwiftSQL",
                 "SwiftSQLExt",
                 "SwiftSQLTesting",
+                .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
                 .product(name: "KeyValueCoding", package: "KeyValueCoding"),
             ]
         ),

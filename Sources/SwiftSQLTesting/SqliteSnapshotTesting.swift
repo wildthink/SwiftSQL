@@ -5,6 +5,7 @@
 //  Created by Jason Jobe on 2/20/23.
 //
 
+#if canImport(SnapshotTesting)
 import Foundation
 import SnapshotTesting
 import SwiftSQL
@@ -85,3 +86,5 @@ public extension Snapshotting where Value == DatabasePool, Format == String {
     static let dbDump = _dump()
 }
 */
+#endif
+

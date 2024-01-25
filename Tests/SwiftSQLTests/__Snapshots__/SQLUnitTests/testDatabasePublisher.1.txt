@@ -1,0 +1,6 @@
+▿ 5 elements
+  - "didCommit"
+  - "didUpdate(main:Test insert(1))"
+  - "didCommit"
+  - "didUpdate(main:Test insert(2))"
+  - "didRollback"
